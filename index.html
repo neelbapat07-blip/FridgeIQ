@@ -19,44 +19,27 @@
     All five screens live in this one file. Each screen is a <section>.
     Only one screen is shown at a time; js/app.js decides which one,
     based on the end of the web address (for example  index.html#fridge).
+
+    Parts marked "filled in by js/app.js" start empty: the app builds them
+    from the food you've saved, so they change as you add and remove food.
   -->
   <div class="app">
 
     <!-- ============ SCREEN 1: HOME DASHBOARD ============ -->
     <section class="screen" id="home" data-tab="home">
       <h1 class="title title--bold">FridgeIQ</h1>
-      <p class="subtitle">Good Afternoon Neel!</p>
+      <p class="subtitle" id="greeting">Good Afternoon Neel!</p>
 
-      <div class="summary-card">
+      <a class="summary-card" href="#fridge">
         <p class="summary-card__label">Your Fridge</p>
-        <p class="summary-card__count">12 items</p>
-        <p class="summary-card__note">2 items need your attention</p>
-      </div>
+        <p class="summary-card__count" id="home-count">0 items</p>
+        <p class="summary-card__note" id="home-attention"></p>
+      </a>
 
       <h2 class="section-heading">Expiring Soon</h2>
       <p class="section-note">Use these ingredients before the expiration date</p>
 
-      <div class="expiring-card">
-        <div class="photo expiring-card__photo"><img src="images/broccoli.png" alt="Broccoli"></div>
-        <div class="expiring-card__text">
-          <p class="expiring-card__name">Broccoli</p>
-          <p class="expiring-card__when">Expires in 2 days</p>
-          <a class="expiring-card__link" href="#recipe">
-            Add to a recipe <img src="images/arrow-right.svg" alt="" class="arrow">
-          </a>
-        </div>
-      </div>
-
-      <div class="expiring-card">
-        <div class="photo expiring-card__photo"><img src="images/milk.png" alt="Milk carton" class="crop-milk"></div>
-        <div class="expiring-card__text">
-          <p class="expiring-card__name">Milk</p>
-          <p class="expiring-card__when">Expires tomorrow</p>
-          <a class="expiring-card__link" href="#recipe">
-            Add to a recipe <img src="images/arrow-right.svg" alt="" class="arrow">
-          </a>
-        </div>
-      </div>
+      <div id="expiring-list"><!-- filled in by js/app.js --></div>
     </section>
 
     <!-- ============ SCREEN 2: MY FRIDGE ============ -->
@@ -66,47 +49,24 @@
 
       <label class="search">
         <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" placeholder="Search your ingredients..." data-coming-soon="Searching">
+        <input type="search" id="fridge-search" placeholder="Search your ingredients..." autocomplete="off">
       </label>
 
-      <div class="chips chips--small">
-        <button class="chip is-selected">All</button>
-        <button class="chip">Meats</button>
-        <button class="chip">Dairy</button>
-        <button class="chip">Fruits</button>
-        <button class="chip">Other</button>
-      </div>
+      <div class="chips chips--small" id="fridge-chips"><!-- filled in by js/app.js --></div>
 
       <div class="items-card">
         <div class="items-card__header">
-          <p>Your Items (12)</p>
-          <p class="items-card__sort">Sort By: Expiration <img src="images/arrow-sort.svg" alt="" class="arrow arrow--down"></p>
+          <p id="fridge-count">Your Items (0)</p>
+          <button class="items-card__sort" id="fridge-sort" type="button">
+            Sort By: <span id="fridge-sort-label">Expiration</span>
+            <img src="images/arrow-sort.svg" alt="" class="arrow arrow--down">
+          </button>
         </div>
-
-        <div class="item">
-          <div class="photo item__photo"><img src="images/apple.jpg" alt="Apple"></div>
-          <div>
-            <p class="item__name">Apples</p>
-            <span class="tag tag--fresh">Fresh</span>
-          </div>
-        </div>
-        <div class="item">
-          <div class="photo item__photo"><img src="images/cheese.png" alt="Cheese" class="crop-cheese"></div>
-          <div>
-            <p class="item__name">Cheese</p>
-            <span class="tag tag--fresh">Fresh</span>
-          </div>
-        </div>
-        <div class="item">
-          <div class="photo item__photo"><img src="images/yogurt.jpg" alt="Yogurt"></div>
-          <div>
-            <p class="item__name">Yogurt</p>
-            <span class="tag tag--fresh">Fresh</span>
-          </div>
-        </div>
+        <div id="fridge-list"><!-- filled in by js/app.js --></div>
       </div>
 
       <a class="big-button" href="#add-food">+ Add Food</a>
+      <button class="text-button" id="reset-example" type="button">Reset to example food</button>
     </section>
 
     <!-- ============ SCREEN 3: ADD FOOD ============ -->
@@ -114,42 +74,55 @@
       <h1 class="title">Add Food</h1>
       <p class="subtitle">Keep your fridge organized</p>
 
-      <form class="form-card" id="add-food-form">
-        <label class="field">
-          <span class="field__label">Food Name</span>
-          <input class="field__input" type="text" placeholder="e.g. Chicken breast">
-        </label>
+      <!-- Quick picks: tap a food to fill in the form below -->
+      <div class="browse-card">
+        <p class="browse-card__title">Quick pick <span class="browse-card__hint">Tap a food to fill in the form</span></p>
+        <div class="chips" id="browse-chips"><!-- filled in by js/app.js --></div>
+        <div class="browse-grid" id="browse-grid"><!-- filled in by js/app.js --></div>
+      </div>
 
-        <label class="field">
-          <span class="field__label">Category</span>
+      <form class="form-card" id="add-food-form" novalidate>
+        <div class="field">
+          <label class="field__label" for="food-name">Food Name</label>
+          <div class="field__autocomplete">
+            <input class="field__input" id="food-name" type="text" placeholder="e.g. Chicken breast" autocomplete="off" maxlength="40">
+            <ul class="suggestions" id="food-suggestions" hidden><!-- filled in by js/app.js --></ul>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="food-category">Category</label>
           <span class="field__select">
-            <select class="field__input">
+            <select class="field__input" id="food-category">
               <option value="" selected disabled>Select a category</option>
-              <option>Meats</option>
-              <option>Dairy</option>
-              <option>Fruits</option>
-              <option>Vegetables</option>
-              <option>Other</option>
             </select>
           </span>
-        </label>
+        </div>
 
-        <label class="field">
-          <span class="field__label">Storage</span>
+        <div class="field">
+          <label class="field__label" for="food-storage">Storage</label>
           <span class="field__select">
-            <select class="field__input">
+            <select class="field__input" id="food-storage">
               <option value="" selected disabled>Select a storage space</option>
-              <option>Fridge</option>
-              <option>Freezer</option>
-              <option>Pantry</option>
             </select>
           </span>
-        </label>
+        </div>
 
-        <label class="field">
-          <span class="field__label">Expiration Date <span class="field__optional">(optional)</span></span>
-          <input class="field__input" type="date">
-        </label>
+        <div class="field">
+          <label class="field__label" for="food-quantity">Quantity <span class="field__optional">(optional)</span></label>
+          <div class="field__row">
+            <input class="field__input" id="food-quantity" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 2">
+            <span class="field__select">
+              <select class="field__input" id="food-unit"></select>
+            </span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="food-expires">Expiration Date <span class="field__optional">(optional)</span></label>
+          <input class="field__input" id="food-expires" type="date">
+          <p class="field__hint" id="expiry-hint"></p>
+        </div>
       </form>
 
       <button class="big-button" type="submit" form="add-food-form">+ Add to My Fridge</button>
@@ -162,77 +135,63 @@
 
       <label class="search search--round">
         <svg class="search__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input type="search" placeholder="Search recipes..." data-coming-soon="Searching">
+        <input type="search" id="recipe-search" placeholder="Search recipes..." autocomplete="off">
       </label>
 
-      <div class="chips">
-        <button class="chip is-selected">All</button>
-        <button class="chip">Use Before Lose</button>
-        <button class="chip">High Protein</button>
-        <button class="chip">Vegetarian</button>
+      <div class="chips" id="recipe-chips">
+        <button class="chip is-selected" data-filter="all" type="button">All</button>
+        <button class="chip" data-filter="use-soon" type="button">Use Before Lose</button>
+        <button class="chip" data-filter="High Protein" type="button">High Protein</button>
+        <button class="chip" data-filter="Vegetarian" type="button">Vegetarian</button>
       </div>
 
-      <h2 class="recipes-heading">Use It Before You Lose It</h2>
-
-      <div class="recipe-card">
-        <img class="recipe-card__photo" src="images/pasta-card.jpg" alt="Broccoli cheddar pasta in a bowl">
-        <div class="recipe-card__footer">
-          <p class="recipe-card__name">Broccoli Cheddar Pasta</p>
-          <a class="recipe-card__button" href="#recipe">
-            View Recipe <img src="images/arrow-right.svg" alt="" class="arrow">
-          </a>
-        </div>
-      </div>
+      <h2 class="recipes-heading" id="recipes-heading">Use It Before You Lose It</h2>
+      <div id="recipe-list"><!-- filled in by js/app.js --></div>
     </section>
 
     <!-- ============ SCREEN 5: RECIPE DETAILS ============ -->
     <section class="screen screen--no-top" id="recipe" data-tab="recipes">
-      <img class="recipe-hero" src="images/pasta-hero.jpg" alt="Broccoli cheddar pasta">
+      <img class="recipe-hero" id="recipe-hero" src="images/pasta-hero.jpg" alt="">
 
-      <h1 class="title title--recipe">Broccoli Cheddar Pasta</h1>
+      <h1 class="title title--recipe" id="recipe-name">Broccoli Cheddar Pasta</h1>
 
       <div class="stats">
-        <div class="stat"><p class="stat__value">20 min</p><p class="stat__label">Time</p></div>
-        <div class="stat"><p class="stat__value">2</p><p class="stat__label">Servings</p></div>
-        <div class="stat"><p class="stat__value">Easy</p><p class="stat__label">Difficulty</p></div>
+        <div class="stat"><p class="stat__value" id="recipe-time">20 min</p><p class="stat__label">Time</p></div>
+        <div class="stat"><p class="stat__value" id="recipe-servings">2</p><p class="stat__label">Servings</p></div>
+        <div class="stat"><p class="stat__value" id="recipe-difficulty">Easy</p><p class="stat__label">Difficulty</p></div>
       </div>
 
       <h2 class="ingredients-heading">Ingredients</h2>
-      <ul class="ingredients">
-        <li><span>Pasta<br>200 g</span>            <span class="tag tag--yes">Yes</span></li>
-        <li><span>Milk<br>1/2 cup</span>           <span class="tag tag--yes">Yes</span></li>
-        <li><span>Cheddar Cheese<br>1/2 cup</span> <span class="tag tag--yes">Yes</span></li>
-        <li><span>Broccoli<br>1 cup</span>         <span class="tag tag--yes">Yes</span></li>
-        <li><span>Garlic<br>2 cloves</span>        <span class="tag tag--no">No</span></li>
-      </ul>
+      <ul class="ingredients" id="recipe-ingredients"><!-- filled in by js/app.js --></ul>
 
-      <button class="green-button" data-coming-soon="The shopping list">+ Add Missing Items to Shopping List</button>
-      <button class="green-button" data-coming-soon="Cooking instructions">Cooking Instructions</button>
+      <button class="green-button" type="button" data-coming-soon="The shopping list">+ Add Missing Items to Shopping List</button>
+      <button class="green-button" type="button" data-coming-soon="Cooking instructions">Cooking Instructions</button>
     </section>
 
     <!-- ============ BOTTOM NAVIGATION BAR (shared by every screen) ============ -->
     <nav class="tab-bar" aria-label="Main">
       <a class="tab" href="#home" data-tab="home">
-        <!-- house icon -->
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>
         <span>Home</span>
       </a>
       <a class="tab" href="#fridge" data-tab="fridge">
-        <!-- fridge icon -->
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M6 9.5h12M9 5.5v2M9 12.5v3"/></svg>
         <span>My Fridge</span>
       </a>
       <a class="tab" href="#recipes" data-tab="recipes">
-        <!-- cooking pot icon -->
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM2 10h2M20 10h2M9 7V5M12 7V4M15 7V5"/></svg>
         <span>Recipes</span>
       </a>
     </nav>
 
-    <!-- Small pop-up message used for "Coming soon" -->
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <!-- Small pop-up message (e.g. "Added Milk", "Coming soon") -->
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span id="toast-text"></span>
+      <button class="toast__action" id="toast-action" type="button" hidden>Undo</button>
+    </div>
   </div>
 
+  <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

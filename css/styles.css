@@ -155,8 +155,8 @@ img { display: block; max-width: 100%; }
   font-size: 12px;
 }
 .chip.is-selected { background: var(--white); }
-.chips--small { justify-content: space-between; }
-.chips--small .chip { flex: 1; height: 18px; padding: 0 6px; }
+.chip.is-selected { background: var(--white); font-weight: 600; }
+.chips--small .chip { flex: 1 0 auto; height: 20px; padding: 0 12px; }
 
 /* Big green buttons ("+ Add Food", "+ Add to My Fridge") */
 .big-button {
@@ -420,4 +420,197 @@ img { display: block; max-width: 100%; }
   transition: opacity 0.2s, transform 0.2s;
   z-index: 20;
 }
-.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+
+/* =========================================================
+   Added for the working (dynamic) version
+   ========================================================= */
+
+/* Food with no photo shows a big emoji on a white tile instead */
+.photo--emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  line-height: 1;
+}
+
+/* More tag colours */
+.tag--soon    { background: var(--tag-orange); color: var(--tag-orange-text); }
+.tag--expired { background: #e5484d; color: #fff; }
+.tag--none    { background: #ececec; color: #555; }
+
+/* Plain text-style button (e.g. "Reset to example food") */
+.text-button {
+  display: block;
+  margin: 16px auto 0;
+  padding: 8px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  color: #3b5f2e;
+  text-decoration: underline;
+}
+
+/* Empty-state messages */
+.empty-card {
+  margin-top: 16px;
+  padding: 20px 16px;
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 15px;
+  text-align: center;
+}
+.empty-card .text-button { margin-top: 8px; }
+.empty-text { padding: 24px 8px; font-size: 15px; text-align: center; }
+
+/* ---------- Home ---------- */
+.summary-card { display: block; }
+.summary-card:active { filter: brightness(0.95); }
+.expiring-card__photo-link { display: block; flex-shrink: 0; }
+.expiring-card__text { min-width: 0; }
+.expiring-card__name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expiring-card__when.is-expired { color: #c2272d; }
+.expiring-card__used {
+  display: block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border: 1px solid #000;
+  border-radius: 12px;
+  background: var(--white);
+  font-size: 12px;
+  font-weight: 500;
+}
+.expiring-card { height: auto; min-height: 137px; }
+.more-link {
+  display: block;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: underline;
+}
+
+/* ---------- My Fridge ---------- */
+.items-card__sort {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+}
+.item { align-items: center; padding: 9px 0 0; border-radius: 12px; }
+.item__info { flex: 1; min-width: 0; }
+.item__name { margin: 0; font-size: 15px; line-height: 18px; }
+.item__details { margin: 3px 0 8px; font-size: 12px; color: #4a4a4a; min-height: 15px; }
+.item.is-highlighted { animation: highlight 2.4s ease-out; }
+@keyframes highlight {
+  0%, 40% { background: #fff6b3; box-shadow: 0 0 0 6px #fff6b3; }
+  100%    { background: transparent; box-shadow: 0 0 0 6px transparent; }
+}
+.item__remove {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+  width: 48px;
+  padding: 6px 0;
+  margin-right: 4px;
+  border: 1px solid #000;
+  border-radius: 12px;
+  background: var(--white);
+  font-size: 15px;
+  line-height: 1;
+}
+.item__remove span { font-size: 10px; }
+
+/* ---------- Add Food: quick pick ---------- */
+.browse-card {
+  margin-top: 16px;
+  padding: 12px 9px;
+  border-radius: 15px;
+  background: var(--card);
+}
+.browse-card__title { font-size: 17px; font-weight: 600; }
+.browse-card__hint { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.browse-card .chips { margin-top: 10px; }
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  max-height: 232px;                 /* scroll inside the box if there are lots of foods */
+  margin-top: 10px;
+  overflow-y: auto;
+}
+.food-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--white);
+}
+.food-tile:active { filter: brightness(0.92); }
+.food-tile__emoji { font-size: 26px; line-height: 1; }
+.food-tile__name { font-size: 11px; line-height: 13px; text-align: center; }
+
+/* ---------- Add Food: the form ---------- */
+.form-card { margin-top: 16px; padding-bottom: 20px; scroll-margin-top: 12px; }
+.field + .field { margin-top: 20px; }
+.field__input { margin-top: 12px; }
+.field__row { display: flex; gap: 8px; }
+.field__row > .field__input { flex: 1; min-width: 0; }
+.field__row > .field__select { flex: 1; }
+.field__row .field__input { margin-top: 12px; }
+.field__hint { margin-top: 6px; font-size: 12px; color: #4a4a4a; }
+.field__hint:empty { display: none; }
+.field__error { margin-top: 6px; font-size: 13px; color: #c2272d; }
+.field__input.has-error { box-shadow: 0 0 0 2px #e5484d; }
+.field__input:focus { outline: 2px solid #3fa52b; outline-offset: 0; }
+.field__autocomplete { position: relative; }
+
+.suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 5;
+}
+.suggestions button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 15px;
+  text-align: left;
+}
+.suggestions button:hover, .suggestions button:focus { background: #eefbe9; }
+.suggestions small { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* ---------- Recipes ---------- */
+.recipe-card + .recipe-card { margin-top: 16px; }
+.recipe-card__have { margin-top: 3px; font-size: 12px; color: #4a4a4a; }
+
+/* ---------- Pop-up with Undo ---------- */
+.toast { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.toast__action {
+  border: 0;
+  background: none;
+  color: #8ef17a;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+}
