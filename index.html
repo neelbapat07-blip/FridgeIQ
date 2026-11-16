@@ -25,6 +25,89 @@
   -->
   <div class="app">
 
+    <!-- ============ SCREEN 0: MY PROFILE (the app starts here) ============ -->
+    <section class="screen" id="profile" data-tab="profile">
+      <h1 class="title title--bold">My Profile</h1>
+      <p class="profile-subtitle">Manage your account and personalize your experience</p>
+
+      <!-- Name card -->
+      <div class="profile-card" id="profile-card">
+        <div class="avatar" id="profile-avatar" aria-hidden="true">?</div>
+        <div class="profile-card__text">
+          <p class="profile-card__name" id="profile-name">Your Name</p>
+          <p class="profile-card__email" id="profile-email">Add your email</p>
+        </div>
+        <button class="profile-card__edit" id="profile-edit" type="button">Edit Profile</button>
+      </div>
+
+      <!-- Edit form (hidden until "Edit Profile" is tapped) -->
+      <form class="panel" id="profile-form" hidden>
+        <label class="panel__label" for="profile-name-input">Name</label>
+        <input class="field__input" id="profile-name-input" type="text" maxlength="40" placeholder="e.g. Neel">
+        <label class="panel__label" for="profile-email-input">Email</label>
+        <input class="field__input" id="profile-email-input" type="email" maxlength="80" placeholder="e.g. you@example.com">
+        <div class="panel__buttons">
+          <button class="small-button small-button--plain" type="button" id="profile-cancel">Cancel</button>
+          <button class="small-button" type="submit">Save</button>
+        </div>
+      </form>
+
+      <h2 class="profile-heading">Appearance</h2>
+      <div class="white-card">
+        <p class="white-card__title">Color Scheme</p>
+        <div class="theme-grid" id="theme-grid">
+          <button class="theme-tile" type="button" data-theme-choice="green">
+            <span class="theme-tile__swatches"><i style="background:#c1fbb0"></i><i style="background:#68dd53"></i><i style="background:#86e46b"></i></span>
+            Fresh Green
+          </button>
+          <button class="theme-tile" type="button" data-theme-choice="peach">
+            <span class="theme-tile__swatches"><i style="background:#ffe4d2"></i><i style="background:#ffa86f"></i><i style="background:#ffc59e"></i></span>
+            Warm Peach
+          </button>
+          <button class="theme-tile" type="button" data-theme-choice="lavender">
+            <span class="theme-tile__swatches"><i style="background:#ebe3ff"></i><i style="background:#b796f5"></i><i style="background:#cdb8fb"></i></span>
+            Lavender
+          </button>
+          <button class="theme-tile" type="button" data-theme-choice="ocean">
+            <span class="theme-tile__swatches"><i style="background:#d6ecff"></i><i style="background:#5eb2f2"></i><i style="background:#93cdf7"></i></span>
+            Ocean Blue
+          </button>
+        </div>
+      </div>
+
+      <h2 class="profile-heading">Recipe AI</h2>
+      <div class="white-card" id="ai-card">
+        <p class="white-card__title">Claude <span class="status-pill" id="ai-status">Not set up</span></p>
+        <p class="white-card__text">
+          FridgeIQ asks Claude to invent recipes from your food and to write cooking instructions.
+          To turn this on, paste your Claude API key. You can create one at
+          <strong>console.anthropic.com</strong> (API use is billed by Anthropic).
+        </p>
+        <form class="ai-key-form" id="ai-key-form">
+          <input class="field__input" id="ai-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
+          <button class="small-button" type="submit">Save key</button>
+        </form>
+        <button class="text-button text-button--left" type="button" id="ai-key-remove" hidden>Remove key</button>
+        <p class="white-card__note">Your key is saved only in this browser on this device and is sent only to Anthropic.</p>
+      </div>
+
+      <h2 class="profile-heading">Account Settings</h2>
+      <div class="white-card white-card--list">
+        <button class="settings-row" type="button" id="privacy-toggle" aria-expanded="false">
+          Privacy Settings
+          <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+        <div class="privacy-panel" id="privacy-panel" hidden>
+          <p>Everything you enter (your food, shopping list, recipes, name and API key) is stored only in this browser on this device. Nothing is sent anywhere, except recipe requests, which go to Anthropic's Claude.</p>
+          <button class="small-button small-button--danger" type="button" id="delete-data">Delete all my data</button>
+        </div>
+        <button class="settings-row" type="button" id="log-out">
+          Log Out
+          <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4"/></svg>
+        </button>
+      </div>
+    </section>
+
     <!-- ============ SCREEN 1: HOME DASHBOARD ============ -->
     <section class="screen" id="home" data-tab="home">
       <h1 class="title title--bold">FridgeIQ</h1>
@@ -40,6 +123,10 @@
       <p class="section-note">Use these ingredients before the expiration date</p>
 
       <div id="expiring-list"><!-- filled in by js/app.js --></div>
+
+      <h2 class="section-heading section-heading--spaced">Shopping List</h2>
+      <p class="section-note">Missing recipe ingredients you've saved. Tap ✓ when you buy one to add it to your fridge.</p>
+      <div id="shopping-list"><!-- filled in by js/app.js --></div>
     </section>
 
     <!-- ============ SCREEN 2: MY FRIDGE ============ -->
@@ -145,15 +232,22 @@
         <button class="chip" data-filter="Vegetarian" type="button">Vegetarian</button>
       </div>
 
-      <h2 class="recipes-heading" id="recipes-heading">Use It Before You Lose It</h2>
+      <!-- Ask Claude for new recipes -->
+      <div class="ai-generate">
+        <button class="green-button ai-generate__button" type="button" id="generate-recipes">✨ Get new recipe ideas from Claude</button>
+        <p class="ai-generate__note" id="generate-note">Claude looks at what's in your fridge, especially food expiring soon.</p>
+      </div>
+
+      <p class="recipes-status" id="recipes-status" hidden></p>
       <div id="recipe-list"><!-- filled in by js/app.js --></div>
     </section>
 
     <!-- ============ SCREEN 5: RECIPE DETAILS ============ -->
     <section class="screen screen--no-top" id="recipe" data-tab="recipes">
-      <img class="recipe-hero" id="recipe-hero" src="images/pasta-hero.jpg" alt="">
+      <div class="recipe-hero-wrap" id="recipe-hero-wrap"><!-- photo or emoji, filled in by js/app.js --></div>
 
       <h1 class="title title--recipe" id="recipe-name">Broccoli Cheddar Pasta</h1>
+      <p class="recipe-description" id="recipe-description"></p>
 
       <div class="stats">
         <div class="stat"><p class="stat__value" id="recipe-time">20 min</p><p class="stat__label">Time</p></div>
@@ -164,8 +258,17 @@
       <h2 class="ingredients-heading">Ingredients</h2>
       <ul class="ingredients" id="recipe-ingredients"><!-- filled in by js/app.js --></ul>
 
-      <button class="green-button" type="button" data-coming-soon="The shopping list">+ Add Missing Items to Shopping List</button>
-      <button class="green-button" type="button" data-coming-soon="Cooking instructions">Cooking Instructions</button>
+      <button class="green-button" type="button" id="add-missing">+ Add Missing Items to Shopping List</button>
+      <button class="green-button" type="button" id="show-steps">Cooking Instructions</button>
+
+      <!-- Step-by-step instructions (written by Claude) -->
+      <div class="steps-card" id="steps-card" hidden>
+        <h2 class="steps-card__title">Cooking Instructions</h2>
+        <ol class="steps" id="recipe-steps"></ol>
+        <p class="steps-card__credit">Written by Claude. Check cooking times and food safety as you go.</p>
+      </div>
+
+      <button class="text-button" type="button" id="delete-recipe" hidden>Delete this recipe</button>
     </section>
 
     <!-- ============ BOTTOM NAVIGATION BAR (shared by every screen) ============ -->
@@ -191,7 +294,10 @@
     </div>
   </div>
 
+  <!-- Anthropic's official Claude library, packed into one file (see js/vendor/) -->
+  <script src="js/vendor/anthropic-sdk.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/claude.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

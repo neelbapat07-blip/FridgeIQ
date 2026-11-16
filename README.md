@@ -15,6 +15,7 @@ To see it at phone size on a computer, make the browser window narrow.
 
 | Screen | How to get there |
 |---|---|
+| My Profile | The app opens here. The person icon at the top right of every screen brings you back |
 | Home | "Home" in the bottom bar |
 | My Fridge | "My Fridge" in the bottom bar |
 | Add Food | "+ Add Food" on My Fridge |
@@ -33,12 +34,32 @@ To see it at phone size on a computer, make the browser window narrow.
   or "Used it" to remove it.
 - **Recipes:** search and filters work, and Recipe Details shows **Yes / No** based on
   what's actually in your fridge.
+- **Claude recipes:** "✨ Get new recipe ideas from Claude" sends your food list (with
+  expiry dates) to Claude, which invents 3 recipes with ingredients and instructions.
+  Searching first (e.g. "Broccoli") or picking a filter (Vegetarian, High Protein,
+  Use Before Lose) steers what Claude makes.
+- **Cooking Instructions:** every recipe has them. If a recipe doesn't have instructions
+  yet, Claude writes them when you tap the button, and they're saved.
+- **Shopping list (on Home):** "+ Add Missing Items" on a recipe adds what you don't have.
+  Tap ✓ when you buy it and it moves into your fridge.
+- **Profile:** your name (used in the greeting), 4 colour schemes, your Claude API key,
+  privacy settings ("Delete all my data") and Log Out.
+
+### Setting up Claude
+
+1. Create an API key at console.anthropic.com (Anthropic bills API use separately from
+   a Claude subscription).
+2. In FridgeIQ, open **My Profile → Recipe AI**, paste the key and tap **Save key**.
+
+The key is saved only in that browser and sent only to Anthropic. Because it lives in the
+browser, this setup is for **personal use**. Before sharing the app publicly, move the Claude
+calls to a small server so the key isn't in visitors' browsers.
 
 Your food is saved **in the browser on that device**. It stays when you close the page,
 but it isn't shared between devices or browsers yet. "Reset to example food" at the bottom
 of My Fridge puts back the starting food.
 
-Still "coming soon": Cooking Instructions and the Shopping List.
+
 
 ## What each file does
 
@@ -48,6 +69,8 @@ Still "coming soon": Cooking Instructions and the Shopping List.
 | `css/styles.css` | The **looks**: colors, sizes, spacing. The colors at the top come from Figma |
 | `js/data.js` | The **lists**: all the food choices, the recipes, and the starting example food. Add a food choice here |
 | `js/app.js` | The **behaviour**: saving food, building the lists, and what every button does |
+| `js/claude.js` | Everything that **talks to Claude**: the instructions Claude gets and the answer format |
+| `js/vendor/` | Anthropic's official Claude library (version 1.4.0), packed into one file so no install is needed |
 | `images/` | The photos and arrows from the Figma file |
 
 ## Notes
