@@ -1,0 +1,423 @@
+/*
+  FridgeIQ styles
+  ---------------
+  This file controls how everything LOOKS: colors, sizes, spacing.
+  The colors at the top come straight from the Figma design.
+  Change one here and it changes everywhere in the app.
+*/
+
+:root {
+  --background: #c1fbb0;    /* light green page background */
+  --card: #d9d9d9;          /* grey cards */
+  --white: #ffffff;
+  --text: #000000;
+  --muted: #6e6e6e;         /* grey helper text, e.g. "(optional)" */
+  --button: #68dd53;        /* bright green buttons */
+  --link-red: #ff383c;      /* "Add to a recipe" links */
+  --tag-green: #92dd6a;     /* "Fresh" / "Yes" tag background */
+  --tag-green-text: #648757;
+  --tag-yes-text: #184300;
+  --tag-orange: #ff7438;    /* "No" tag background */
+  --tag-orange-text: #830505;
+  --nav-text: #49454f;
+  --nav-highlight: #c1fbb0;
+
+  --gutter: 12px;           /* space at the left and right edge of each screen */
+  --nav-height: 64px;
+}
+
+/* ---------- Basic page setup ---------- */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* On a computer, the area around the phone-sized app is a slightly darker green */
+body { background: #a9e597; }
+
+p, h1, h2, ul { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+img { display: block; max-width: 100%; }
+
+/* The phone-sized "frame" that holds every screen */
+.app {
+  position: relative;
+  max-width: 430px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--background);
+}
+
+/* ---------- Screens ---------- */
+.screen {
+  display: none;                       /* hidden unless it is the active screen */
+  padding: 38px var(--gutter) calc(var(--nav-height) + 32px + env(safe-area-inset-bottom));
+}
+.screen.is-active { display: block; }
+.screen--no-top { padding-top: 0; }
+
+/* ---------- Shared text styles ---------- */
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 34px;
+}
+.title--bold { font-weight: 700; }
+
+.subtitle {
+  margin-top: 7px;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* ---------- Shared pieces ---------- */
+
+/* Square-ish photo boxes with white background and rounded corners */
+.photo {
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--white);
+  flex-shrink: 0;
+}
+.photo img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Two photos are zoomed/cropped in Figma; these match that crop */
+.photo img.crop-milk   { width: 108.62%; height: 114.89%; max-width: none; margin: -6.38% 0 0 -7.03%; }
+.photo img.crop-cheese { width: 104.89%; height: 120.79%; max-width: none; margin: -9.9% 0 0 -0.13%; }
+
+.arrow { width: 25px; height: auto; }
+.arrow--down { width: 15px; transform: rotate(90deg); }
+
+/* Small pill-shaped labels: Fresh / Yes / No */
+.tag {
+  display: inline-block;
+  min-width: 62px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 15px;
+  text-align: center;
+}
+.tag--fresh { background: var(--tag-green); color: var(--tag-green-text); }
+.tag--yes   { background: var(--tag-green); color: var(--tag-yes-text); }
+.tag--no    { background: var(--tag-orange); color: var(--tag-orange-text); }
+
+/* Search boxes */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 32px;
+  margin-top: 7px;
+  padding: 0 10px;
+  background: var(--white);
+  border-radius: 12px;
+}
+.search--round { border-radius: 15px; margin-top: 11px; }
+.search__icon {
+  width: 16px; height: 16px; flex-shrink: 0;
+  fill: none; stroke: #1e1e1e; stroke-width: 2.5; stroke-linecap: round;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+}
+.search input::placeholder { color: var(--text); }
+
+/* Filter buttons (All, Meats, Dairy...) */
+.chips {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;                    /* swipe sideways if they don't fit */
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #000;
+  border-radius: 12px;
+  background: var(--card);
+  font-size: 12px;
+}
+.chip.is-selected { background: var(--white); }
+.chips--small { justify-content: space-between; }
+.chips--small .chip { flex: 1; height: 18px; padding: 0 6px; }
+
+/* Big green buttons ("+ Add Food", "+ Add to My Fridge") */
+.big-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 91px;
+  margin-top: 47px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--button);
+  font-size: 36px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Smaller green buttons on the recipe screen */
+.green-button {
+  display: block;
+  width: 100%;
+  height: 36px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--button);
+  font-size: 16px;
+}
+
+.big-button:active, .green-button:active, .chip:active, .recipe-card__button:active { filter: brightness(0.92); }
+
+/* ---------- Screen 1: Home ---------- */
+.summary-card {
+  margin-top: 42px;
+  padding: 9px;
+  height: 100px;
+  border-radius: 15px;
+  background: var(--card);
+}
+.summary-card__label { font-size: 12px; }
+.summary-card__count { margin-top: 6px; font-size: 24px; line-height: 29px; }
+.summary-card__note  { margin-top: 7px; font-size: 16px; }
+
+.section-heading { margin-top: 16px; font-size: 20px; font-weight: 600; line-height: 24px; }
+.section-note    { margin-top: 2px; font-size: 13px; }
+
+.expiring-card {
+  display: flex;
+  gap: 15px;
+  height: 137px;
+  margin-top: 16px;
+  padding: 7px;
+  border-radius: 12px;
+  background: var(--card);
+}
+.expiring-card + .expiring-card { margin-top: 20px; }
+.expiring-card__photo { width: 144px; height: 123px; }
+.expiring-card__text { padding-top: 6px; font-weight: 600; }
+.expiring-card__name { font-size: 20px; line-height: 24px; }
+.expiring-card__when { margin-top: 6px; font-size: 13px; }
+.expiring-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--link-red);
+}
+
+/* ---------- Screen 2: My Fridge ---------- */
+.items-card {
+  margin-top: 40px;
+  padding: 9px 9px 13px;
+  border-radius: 12px;
+  background: var(--card);
+}
+.items-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1px 4px;
+  font-size: 15px;
+}
+.items-card__sort { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+
+.item { display: flex; gap: 14px; padding-top: 9px; }
+.item__photo { width: 109px; height: 109px; }
+.item__name { margin: 15px 0 14px; font-size: 15px; line-height: 18px; }
+
+/* ---------- Screen 3: Add Food ---------- */
+.form-card {
+  margin-top: 20px;
+  padding: 14px 9px 54px;
+  border-radius: 15px;
+  background: var(--card);
+}
+.field { display: block; }
+.field + .field { margin-top: 27px; }
+.field__label { display: block; font-size: 20px; line-height: 24px; }
+.field__optional { font-size: 12px; color: var(--muted); }
+.field__input {
+  display: block;
+  width: 100%;
+  height: 38px;
+  margin-top: 27px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--white);
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.field__input::placeholder { color: var(--text); }
+.field__select { position: relative; display: block; }
+.field__select::after {                 /* the little "v" arrow on the dropdowns */
+  content: "";
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #1e1e1e;
+  border-bottom: 2px solid #1e1e1e;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.form-card + .big-button { margin-top: 7px; }
+
+/* ---------- Screen 4: Recipe Finder ---------- */
+#recipes { padding-top: 41px; }
+#recipes .chips { margin-top: 10px; }
+.recipes-heading {
+  margin-top: 10px;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 34px;
+  text-align: center;
+}
+.recipe-card {
+  max-width: 337px;
+  margin: 9px auto 0;
+  background: var(--card);
+}
+.recipe-card__photo { width: 100%; aspect-ratio: 337 / 232; object-fit: cover; }
+.recipe-card__footer { padding: 10px 14px 9px; }
+.recipe-card__name { font-size: 15px; line-height: 18px; }
+.recipe-card__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 25px;
+  margin-top: 6px;
+  border-radius: 12px;
+  background: var(--white);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* ---------- Screen 5: Recipe Details ---------- */
+.recipe-hero {
+  width: calc(100% + 2 * var(--gutter));
+  max-width: none;
+  height: 198px;
+  margin: 0 calc(-1 * var(--gutter));
+  object-fit: cover;
+}
+.title--recipe { margin-top: 6px; font-weight: 500; }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 13px;
+}
+.stat {
+  height: 84px;
+  padding-top: 16px;
+  border-radius: 12px;
+  background: var(--white);
+  text-align: center;
+  font-size: 20px;
+  line-height: 24px;
+}
+.stat__value { font-weight: 300; }
+.stat__label { margin-top: 7px; }
+
+.ingredients-heading { margin-top: 29px; font-size: 20px; font-weight: 500; line-height: 24px; }
+.ingredients {
+  margin-top: 6px;
+  padding: 20px 20px 12px 25px;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--white);
+}
+.ingredients li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  min-height: 36px;
+  font-size: 15px;
+  line-height: 18px;
+}
+.ingredients li + li { margin-top: 14px; }
+.ingredients .tag { margin-top: 6px; }
+.ingredients + .green-button { margin-top: 7px; }
+
+/* ---------- Bottom navigation bar ---------- */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+  padding: 0 8px env(safe-area-inset-bottom);
+  background: var(--white);
+  z-index: 10;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 100px;
+  color: var(--nav-text);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+.tab svg {
+  width: 24px; height: 24px;
+  fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round;
+}
+.tab.is-active { background: var(--nav-highlight); color: #1d1b20; }
+.tab.is-active svg { fill: currentColor; fill-opacity: 0.15; }
+
+/* ---------- "Coming soon" pop-up ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height) + 16px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 12px);
+  max-width: calc(min(100%, 430px) - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #1d1b20;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 20;
+}
+.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
