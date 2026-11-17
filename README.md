@@ -33,8 +33,7 @@ Download the project, **extract the ZIP** (right-click → Extract All), then do
 - **Home:** item count, food that needs attention, **Expiring Soon**, today's best
   **Recipe Pick for You**, and a link to the shopping list.
 - **Recipes:** 29 built-in recipes, ranked by how well they fit your fridge (see below).
-  Filters: All, Can Make Now, Use Before Lose, Breakfast, Lunch, Dinner, Vegetarian,
-  High Protein, Quick. Search by recipe name or ingredient.
+  Filters: All, Use Before Lose, Can Make Now, Quick. Search by recipe name or ingredient.
 - **Recipe Details:** every ingredient marked Have / Missing / Use soon, full cooking
   instructions, and **Add Missing Items to Shopping List**.
 - **Shopping:** add items yourself or from recipes. Tap ✓ when you buy something and it
