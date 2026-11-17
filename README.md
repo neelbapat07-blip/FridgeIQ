@@ -3,13 +3,14 @@
 A phone-friendly website that helps you keep track of the food in your fridge
 and find recipes that use it before it goes bad.
 
-The screens follow the Figma designs, and the app **works**: food you add is saved,
-and every screen updates to match.
+FridgeIQ runs entirely in the browser. There's no account, no server, no AI service
+and no paid API. Your food, shopping list and profile are saved in the browser on
+your device.
 
 ## How to open it
 
-Double-click `index.html`, or drag it into any web browser.
-To see it at phone size on a computer, make the browser window narrow.
+Download the project, **extract the ZIP** (right-click → Extract All), then double-click
+`index.html`. To see it at phone size on a computer, make the browser window narrow.
 
 ## The screens
 
@@ -18,62 +19,62 @@ To see it at phone size on a computer, make the browser window narrow.
 | My Profile | The app opens here. The person icon at the top right of every screen brings you back |
 | Home | "Home" in the bottom bar |
 | My Fridge | "My Fridge" in the bottom bar |
-| Add Food | "+ Add Food" on My Fridge |
+| Add / Edit Food | "+ Add Food" on My Fridge, or tap any food to edit it |
 | Recipe Finder | "Recipes" in the bottom bar |
-| Recipe Details | "View Recipe" on Recipe Finder, or "Add to a recipe" on Home |
+| Recipe Details | Tap any recipe card |
+| Shopping List | "Shopping" in the bottom bar |
 
 ## What works
 
-- **Add Food:** pick from about 120 foods (Quick pick grid, or start typing for suggestions).
-  Picking one fills in the category, storage and a suggested expiration date. You can also
-  type any food that isn't on the list.
-- **My Fridge:** search, category filters, sorting (Expiration / Name / Newest), and a
-  **Used** button to remove food (with **Undo**). Tags show Fresh, days left, or Expired.
-- **Home:** the item count, "need your attention" and **Expiring Soon** update by themselves.
-  Tap a food to see it in My Fridge, "Add to a recipe" to find recipes that use it,
-  or "Used it" to remove it.
-- **Recipes:** search and filters work, and Recipe Details shows **Yes / No** based on
-  what's actually in your fridge.
-- **Claude recipes:** "✨ Get new recipe ideas from Claude" sends your food list (with
-  expiry dates) to Claude, which invents 3 recipes with ingredients and instructions.
-  Searching first (e.g. "Broccoli") or picking a filter (Vegetarian, High Protein,
-  Use Before Lose) steers what Claude makes.
-- **Cooking Instructions:** every recipe has them. If a recipe doesn't have instructions
-  yet, Claude writes them when you tap the button, and they're saved.
-- **Shopping list (on Home):** "+ Add Missing Items" on a recipe adds what you don't have.
-  Tap ✓ when you buy it and it moves into your fridge.
-- **Profile:** your name (used in the greeting), 4 colour schemes, your Claude API key,
-  privacy settings ("Delete all my data") and Log Out.
+- **My Fridge:** add, edit and delete food; search, category filters, sorting
+  (Expiration / Name / Newest). Tags show Fresh, days left, or Expired.
+- **Add Food:** pick from about 130 foods (Quick pick grid or type-ahead suggestions),
+  which fills in the category, storage and a suggested expiration date. Any other food can be typed in.
+- **Home:** item count, food that needs attention, **Expiring Soon**, today's best
+  **Recipe Pick for You**, and a link to the shopping list.
+- **Recipes:** 29 built-in recipes, ranked by how well they fit your fridge (see below).
+  Filters: All, Can Make Now, Use Before Lose, Breakfast, Lunch, Dinner, Vegetarian,
+  High Protein, Quick. Search by recipe name or ingredient.
+- **Recipe Details:** every ingredient marked Have / Missing / Use soon, full cooking
+  instructions, and **Add Missing Items to Shopping List**.
+- **Shopping:** add items yourself or from recipes. Tap ✓ when you buy something and it
+  moves into My Fridge with a suggested expiration date.
+- **Profile:** your name (used in the greeting), 4 colour schemes, privacy settings
+  (Delete all my data) and Log Out.
 
-### Setting up Claude
+## How recipe matching works
 
-1. Create an API key at console.anthropic.com (Anthropic bills API use separately from
-   a Claude subscription).
-2. In FridgeIQ, open **My Profile → Recipe AI**, paste the key and tap **Save key**.
+For each recipe, FridgeIQ checks every required ingredient against My Fridge
+(optional extras such as garnishes don't count against you). Similar foods count as a
+match, for example any cheese works for "Cheese" and Greek yogurt works for "Yogurt".
+These are listed in `INGREDIENT_ALIASES` in `js/recipes.js`.
 
-The key is saved only in that browser and sent only to Anthropic. Because it lives in the
-browser, this setup is for **personal use**. Before sharing the app publicly, move the Claude
-calls to a small server so the key isn't in visitors' browsers.
+Recipes are then sorted by:
+1. how many of the ingredients you already have,
+2. a big boost for each of your foods expiring in the next 3 days,
+3. a bonus when you have everything.
 
-Your food is saved **in the browser on that device**. It stays when you close the page,
-but it isn't shared between devices or browsers yet. "Reset to example food" at the bottom
-of My Fridge puts back the starting food.
+Each card says why it's recommended, for example "Uses your Milk and Broccoli before
+they expire. Just get Garlic". Everything updates as soon as your food changes.
 
-
+Salt, pepper, cooking oil and water are assumed to be in every kitchen.
 
 ## What each file does
 
 | File | What it's for |
 |---|---|
-| `index.html` | The **content**: all five screens, their text, pictures and buttons |
-| `css/styles.css` | The **looks**: colors, sizes, spacing. The colors at the top come from Figma |
-| `js/data.js` | The **lists**: all the food choices, the recipes, and the starting example food. Add a food choice here |
-| `js/app.js` | The **behaviour**: saving food, building the lists, and what every button does |
-| `js/claude.js` | Everything that **talks to Claude**: the instructions Claude gets and the answer format |
-| `js/vendor/` | Anthropic's official Claude library (version 1.4.0), packed into one file so no install is needed |
-| `images/` | The photos and arrows from the Figma file |
+| `index.html` | The **content**: all the screens, their text, pictures and buttons |
+| `css/styles.css` | The **looks**: colours, sizes, spacing. The colours at the top come from Figma |
+| `js/data.js` | The **food list** for Add Food, and the starting example food |
+| `js/recipes.js` | The **recipe database**. Copy one recipe block to add a new recipe |
+| `js/app.js` | The **behaviour**: saving, recipe matching, and what every button does |
+| `images/` | Photos and arrows from the Figma file |
 
 ## Notes
 
-- The cheese and yogurt photos look like stock-photo previews. They're fine for a
-  private prototype, but replace them before the app goes public.
+- Most recipes use a food emoji on a coloured tile as their picture. Only Broccoli Cheddar
+  Pasta has real photos so far. To add a photo, put it in `images/` and set
+  `image: { photo: "images/your-photo.jpg" }` on that recipe.
+- The cheese and yogurt photos look like stock-photo previews. Replace them before
+  launching publicly.
+- Data is saved per browser and device. It isn't shared between your phone and computer.

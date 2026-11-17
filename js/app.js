@@ -4,19 +4,22 @@
   This file controls what happens when you TAP things, and builds the parts
   of each screen that change (lists, counts, tags).
 
+  Everything runs inside the browser: no accounts, no internet services,
+  no paid APIs. Your data is saved in this browser on this device.
+
   It is split into numbered parts:
-    1. Saving & loading (everything is kept in this browser on this device)
+    1. Saving & loading
     2. Date helpers ("Expires in 2 days")
     3. Small helpers (pictures, pop-up messages)
-    4. Screen switching + the profile button on every screen
-    5. Profile screen (name, colour scheme, Claude key, privacy, log out)
-    6. Home screen (+ shopping list)
-    7. My Fridge screen
-    8. Add Food screen
-    9. Recipe Finder (+ asking Claude for new recipes)
-   10. Recipe Details (+ asking Claude for cooking instructions)
-
-  The Claude parts live in js/claude.js.
+    4. Recipe matching (which recipes fit the food you have)
+    5. Screen switching + the profile button on every screen
+    6. Profile screen
+    7. Home screen
+    8. My Fridge screen
+    9. Add / Edit Food screen
+   10. Recipe Finder
+   11. Recipe Details
+   12. Shopping List
 */
 
 /* =========================================================
@@ -26,39 +29,61 @@ const KEYS = {
   items:    "fridgeiq.items.v1",
   profile:  "fridgeiq.profile.v1",
   shopping: "fridgeiq.shopping.v1",
-  recipes:  "fridgeiq.recipes.v1",   // recipes Claude made for you
-  steps:    "fridgeiq.steps.v1",     // Claude's instructions for the built-in recipes
 };
 
+/* Data from older versions of FridgeIQ that is no longer used (AI recipes and an API key) */
+const RETIRED_KEYS = ["fridgeiq.claudeKey.v1", "fridgeiq.recipes.v1", "fridgeiq.steps.v1"];
+
+/* Can this browser save data? (Private browsing or blocked cookies can stop it.) */
+const storageWorks = (() => {
+  try {
+    const test = "fridgeiq.test";
+    localStorage.setItem(test, "1");
+    localStorage.removeItem(test);
+    RETIRED_KEYS.forEach((key) => localStorage.removeItem(key));
+    return true;
+  } catch (error) {
+    return false;
+  }
+})();
+
 function load(key, fallback) {
+  if (!storageWorks) return fallback;
   try {
     const value = JSON.parse(localStorage.getItem(key));
     return value === null ? fallback : value;
   } catch (error) {
-    return fallback;
+    return fallback;   // saved data was damaged: start fresh for this part
   }
 }
 
+let saveWarningShown = false;
 function save(key, value) {
+  if (!storageWorks) return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    /* saving is blocked (e.g. private browsing): the app still works until you close it */
+    // Usually means the browser's storage is full
+    if (!saveWarningShown) {
+      saveWarningShown = true;
+      setTimeout(() => showToast("Couldn't save your latest change. Your browser's storage may be full."), 0);
+    }
   }
 }
 
 const DEFAULT_PROFILE = { name: "", email: "", theme: "green" };
 
-let items = load(KEYS.items, null) || makeExampleItems();
+let items = asArray(load(KEYS.items, null)) || makeExampleItems();
 let profile = { ...DEFAULT_PROFILE, ...load(KEYS.profile, {}) };
-let shoppingList = load(KEYS.shopping, []);
-let myRecipes = load(KEYS.recipes, []);
-let builtInSteps = load(KEYS.steps, {});
+let shoppingList = asArray(load(KEYS.shopping, [])) || [];
 
 const saveItems = () => save(KEYS.items, items);
 const saveProfile = () => save(KEYS.profile, profile);
-const saveShopping = () => save(KEYS.shopping, shoppingList);
-const saveRecipes = () => { save(KEYS.recipes, myRecipes); save(KEYS.steps, builtInSteps); };
+const saveShopping = () => { save(KEYS.shopping, shoppingList); updateShoppingBadge(); };
+
+function asArray(value) {
+  return Array.isArray(value) ? value.filter((x) => x && typeof x.name === "string") : null;
+}
 
 function makeExampleItems() {
   return EXAMPLE_ITEMS.map((example, index) => ({
@@ -75,11 +100,6 @@ function makeExampleItems() {
 
 function newId(prefix) {
   return (prefix || "item") + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
-}
-
-/* All recipes: Claude's newest first, then the built-in ones */
-function allRecipes() {
-  return [...myRecipes, ...RECIPES.map((r) => ({ ...r, steps: builtInSteps[r.id] || r.steps || [] }))];
 }
 
 /* =========================================================
@@ -101,7 +121,8 @@ function dateFromToday(days) {
 /* How many days until a date: 0 = today, 1 = tomorrow, -1 = yesterday, null = no date */
 function daysUntil(dateText) {
   if (!dateText) return null;
-  const [y, m, d] = dateText.split("-").map(Number);
+  const [y, m, d] = String(dateText).split("-").map(Number);
+  if (!y || !m || !d) return null;
   const target = new Date(y, m - 1, d);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -114,6 +135,12 @@ const SOON_DAYS = 3;
 function needsAttention(item) {
   const days = daysUntil(item.expires);
   return days !== null && days <= SOON_DAYS;
+}
+
+/* Expiring soon but still OK to eat (used to prioritise recipes) */
+function expiringSoon(item) {
+  const days = daysUntil(item.expires);
+  return days !== null && days >= 0 && days <= SOON_DAYS;
 }
 
 function expiryText(item) {
@@ -163,14 +190,25 @@ function foodPicture(item, extraClass) {
   return `<div class="photo photo--emoji ${extraClass}" role="img" aria-label="${esc(item.name)}">${emoji}</div>`;
 }
 
-/* A recipe's picture: its photo, or a big emoji on a coloured background */
-function recipePicture(recipe, className) {
-  if (recipe.photo) return `<img class="${className}" src="${recipe.photo}" alt="${esc(recipe.name)}">`;
-  const emoji = esc(String(recipe.emoji || "🍽️").slice(0, 8));
-  return `<div class="${className} recipe-emoji" role="img" aria-label="${esc(recipe.name)}">${emoji}</div>`;
+/* A recipe's picture: its photo, or its emoji on its colour */
+function recipePicture(recipe, className, useHero) {
+  const image = recipe.image || {};
+  const photo = (useHero && image.heroPhoto) || image.photo;
+  if (photo) return `<img class="${className}" src="${photo}" alt="${esc(recipe.name)}">`;
+  return `<div class="${className} recipe-emoji" style="background:${esc(image.color || "#ffffff")}" role="img" aria-label="${esc(recipe.name)}">${image.emoji || "🍽️"}</div>`;
 }
 
-/* Pop-up message at the bottom. Optionally with an "Undo" (or other) button. */
+function totalMinutes(recipe) {
+  return (recipe.prepMinutes || 0) + (recipe.cookMinutes || 0);
+}
+
+function listNames(names) {
+  if (names.length <= 1) return names.join("");
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/* Pop-up message at the bottom. Optionally with a button (e.g. "Undo"). */
 const toast = document.getElementById("toast");
 const toastText = document.getElementById("toast-text");
 const toastAction = document.getElementById("toast-action");
@@ -193,24 +231,120 @@ toastAction.addEventListener("click", () => {
   toast.classList.remove("is-visible");
 });
 
-/* Shows a Claude problem; if it's about the API key, offers a button to the Profile */
-function showClaudeProblem(error) {
-  const message = error instanceof ClaudeProblem ? error.message : "Something went wrong talking to Claude.";
-  if (error && error.needsKey) showToast(message, () => { location.hash = "#profile/ai"; }, "Open Profile");
-  else showToast(message);
+document.getElementById("storage-warning").hidden = storageWorks;
+
+/* =========================================================
+   4. RECIPE MATCHING
+   Compares each recipe's ingredients with the food in My Fridge.
+   ========================================================= */
+
+/* "Tomatoes" -> "tomato", "Eggs" -> "egg", so singular and plural match */
+function simplify(name) {
+  return String(name).toLowerCase().trim().replace(/\s+/g, " ").replace(/(es|s)$/, "");
+}
+
+// Build a quick lookup of which names count as the same ingredient
+const ALIAS_LOOKUP = {};
+Object.entries(INGREDIENT_ALIASES).forEach(([name, others]) => {
+  ALIAS_LOOKUP[simplify(name)] = new Set([simplify(name), ...others.map(simplify)]);
+});
+
+function ingredientMatchesFood(ingredientName, foodName) {
+  const wanted = simplify(ingredientName);
+  const have = simplify(foodName);
+  if (!wanted || !have) return false;
+  if (wanted === have) return true;
+  const aliases = ALIAS_LOOKUP[wanted];
+  return Boolean(aliases && aliases.has(have));
+}
+
+/* Finds a food in the fridge for this ingredient. Prefers food that isn't expired. */
+function findInFridge(ingredientName) {
+  const matches = items.filter((item) => ingredientMatchesFood(ingredientName, item.name));
+  if (matches.length === 0) return undefined;
+  return matches.find((item) => { const d = daysUntil(item.expires); return d === null || d >= 0; }) || matches[0];
+}
+
+/*
+  Works out how well a recipe fits your fridge:
+    have / missing     – required ingredients you have / don't have
+    usesExpiring       – your foods it uses that expire within 3 days
+    score              – used to sort recipes (higher = better fit)
+    reason             – a short sentence explaining the recommendation
+*/
+function matchRecipe(recipe) {
+  const required = recipe.ingredients.filter((i) => !i.optional);
+  const have = [];
+  const missing = [];
+  const usesExpiring = [];
+
+  required.forEach((ingredient) => {
+    const food = findInFridge(ingredient.name);
+    if (food) {
+      have.push(ingredient);
+      if (expiringSoon(food) && !usesExpiring.includes(food.name)) usesExpiring.push(food.name);
+    } else {
+      missing.push(ingredient);
+    }
+  });
+
+  // Optional extras still count towards "use it before you lose it"
+  recipe.ingredients.filter((i) => i.optional).forEach((ingredient) => {
+    const food = findInFridge(ingredient.name);
+    if (food && expiringSoon(food) && !usesExpiring.includes(food.name)) usesExpiring.push(food.name);
+  });
+
+  const total = required.length || 1;
+  const score = (have.length / total) * 100
+    + usesExpiring.length * 30
+    + (missing.length === 0 ? 25 : 0)
+    - missing.length * 4;
+
+  let reason;
+  const missingNames = missing.map((i) => i.name);
+  if (usesExpiring.length) {
+    reason = `Uses your ${listNames(usesExpiring)} before ${usesExpiring.length === 1 ? "it expires" : "they expire"}`;
+    if (missing.length === 0) reason += ", and you have everything";
+    else if (missing.length <= 2) reason += `. Just get ${listNames(missingNames)}`;
+  } else if (missing.length === 0) {
+    reason = "You have everything you need to make this";
+  } else if (have.length === 0) {
+    reason = "You'd need to shop for this one";
+  } else if (missing.length <= 2) {
+    reason = `Almost there: you only need ${listNames(missingNames)}`;
+  } else {
+    reason = `You have ${have.length} of ${required.length} ingredients`;
+  }
+
+  return { recipe, have, missing, usesExpiring, score, reason, total: required.length };
+}
+
+/* All recipes, best match first */
+function rankedRecipes() {
+  return RECIPE_DATABASE.map(matchRecipe).sort((a, b) =>
+    b.score - a.score || totalMinutes(a.recipe) - totalMinutes(b.recipe) || a.recipe.name.localeCompare(b.recipe.name));
+}
+
+function matchSummary(match) {
+  return match.missing.length === 0
+    ? `✓ All ${match.total} ingredients`
+    : `✓ ${match.have.length} have · ${match.missing.length} missing`;
 }
 
 /* =========================================================
-   4. SCREEN SWITCHING
+   5. SCREEN SWITCHING
    The web address decides the screen:
      #profile              Profile (the start screen)
      #home                 Home
      #fridge/ITEM-ID       My Fridge, with one food highlighted
      #add-food             Add Food
-     #recipes/broccoli     Recipe Finder, showing recipes that use broccoli
+     #edit-food/ITEM-ID    Edit a food you already added
+     #recipes/broccoli     Recipe Finder, searching for broccoli
      #recipe/RECIPE-ID     Recipe Details
+     #shopping             Shopping List
    ========================================================= */
 const START_SCREEN = "profile";
+const SCREEN_ALIASES = { "edit-food": "add-food" };
 
 // Put the profile button in the top-right corner of every screen
 const PROFILE_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1"/></svg>`;
@@ -226,7 +360,7 @@ function readAddress() {
 
 function showScreen() {
   const { name, detail } = readAddress();
-  const screen = document.getElementById(name) || document.getElementById(START_SCREEN);
+  const screen = document.getElementById(SCREEN_ALIASES[name] || name) || document.getElementById(START_SCREEN);
 
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("is-active", s === screen));
 
@@ -239,20 +373,32 @@ function showScreen() {
   });
   document.querySelectorAll(".profile-button").forEach((b) => b.classList.toggle("is-active", screen.id === "profile"));
 
-  window.scrollTo(0, 0);
+  // Start each screen at the top. (Browsers also try to jump to the element named in the
+  // address, e.g. #fridge, which would hide the top of the page; this undoes that.)
+  pendingScrollTarget = null;
+  scrollToTarget();
+  requestAnimationFrame(scrollToTarget);
 
-  if (screen.id === "profile") renderProfile(detail);
+  if (screen.id === "profile") renderProfile();
   if (screen.id === "home") renderHome();
   if (screen.id === "fridge") renderFridge(detail);
-  if (screen.id === "add-food") prepareAddFood();
+  if (screen.id === "add-food") prepareFoodForm(name === "edit-food" ? detail : null);
   if (screen.id === "recipes") openRecipeFinder(detail);
   if (screen.id === "recipe") renderRecipe(detail);
+  if (screen.id === "shopping") renderShopping();
+}
+
+let pendingScrollTarget = null;   // an element to scroll to instead of the top (e.g. a new food)
+function scrollToTarget() {
+  if (pendingScrollTarget && document.body.contains(pendingScrollTarget)) pendingScrollTarget.scrollIntoView({ block: "center" });
+  else window.scrollTo(0, 0);
 }
 
 window.addEventListener("hashchange", showScreen);
+window.addEventListener("load", scrollToTarget);
 
 /* =========================================================
-   5. PROFILE SCREEN
+   6. PROFILE SCREEN
    ========================================================= */
 const THEME_COLORS = { green: "#c1fbb0", peach: "#ffe4d2", lavender: "#ebe3ff", ocean: "#d6ecff" };
 
@@ -263,13 +409,13 @@ function applyTheme() {
 }
 
 function firstName() {
-  return profile.name.trim().split(/\s+/)[0] || "";
+  return String(profile.name || "").trim().split(/\s+/)[0] || "";
 }
 
-function renderProfile(detail) {
-  const name = profile.name.trim();
+function renderProfile() {
+  const name = String(profile.name || "").trim();
   document.getElementById("profile-name").textContent = name || "Your Name";
-  document.getElementById("profile-email").textContent = profile.email.trim() || "Tap Edit Profile to add your details";
+  document.getElementById("profile-email").textContent = String(profile.email || "").trim() || "Tap Edit Profile to add your details";
   document.getElementById("profile-avatar").textContent =
     name ? name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase() : "?";
 
@@ -278,21 +424,8 @@ function renderProfile(detail) {
     tile.classList.toggle("is-selected", selected);
     tile.setAttribute("aria-pressed", selected);
   });
-
-  const hasKey = Boolean(getClaudeKey());
-  const status = document.getElementById("ai-status");
-  status.textContent = hasKey ? "Connected" : "Not set up";
-  status.classList.toggle("is-on", hasKey);
-  document.getElementById("ai-key-input").placeholder = hasKey ? "•••••••• (saved, paste a new key to replace)" : "sk-ant-…";
-  document.getElementById("ai-key-remove").hidden = !hasKey;
-
-  if (detail === "ai") {
-    document.getElementById("ai-card").scrollIntoView({ block: "center" });
-    document.getElementById("ai-key-input").focus({ preventScroll: true });
-  }
 }
 
-/* Edit Profile */
 const profileForm = document.getElementById("profile-form");
 document.getElementById("profile-edit").addEventListener("click", () => {
   document.getElementById("profile-name-input").value = profile.name;
@@ -317,7 +450,6 @@ profileForm.addEventListener("submit", (event) => {
   showToast(profile.name ? `Hi ${firstName()}! Profile saved` : "Profile saved");
 });
 
-/* Colour scheme */
 document.getElementById("theme-grid").addEventListener("click", (event) => {
   const tile = event.target.closest("[data-theme-choice]");
   if (!tile) return;
@@ -327,25 +459,6 @@ document.getElementById("theme-grid").addEventListener("click", (event) => {
   renderProfile();
 });
 
-/* Claude API key */
-document.getElementById("ai-key-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const input = document.getElementById("ai-key-input");
-  const key = input.value.trim();
-  if (!key) { showToast("Paste your Claude API key first"); return; }
-  if (!key.startsWith("sk-ant-")) { showToast("Claude API keys start with “sk-ant-”"); return; }
-  setClaudeKey(key);
-  input.value = "";
-  renderProfile();
-  showToast("Claude is connected. Try it on the Recipes screen", () => { location.hash = "#recipes"; }, "Go");
-});
-document.getElementById("ai-key-remove").addEventListener("click", () => {
-  setClaudeKey("");
-  renderProfile();
-  showToast("Claude API key removed from this device");
-});
-
-/* Privacy settings */
 document.getElementById("privacy-toggle").addEventListener("click", (event) => {
   const panel = document.getElementById("privacy-panel");
   panel.hidden = !panel.hidden;
@@ -353,7 +466,7 @@ document.getElementById("privacy-toggle").addEventListener("click", (event) => {
   event.currentTarget.classList.toggle("is-open", !panel.hidden);
 });
 document.getElementById("delete-data").addEventListener("click", () => {
-  if (!confirm("Delete all FridgeIQ data on this device? This removes your food, shopping list, recipes, profile and Claude key, and can't be undone.")) return;
+  if (!confirm("Delete all FridgeIQ data on this device? This removes your food, shopping list and profile, and can't be undone.")) return;
   try {
     Object.keys(localStorage).filter((k) => k.startsWith("fridgeiq.")).forEach((k) => localStorage.removeItem(k));
   } catch (error) { /* nothing saved */ }
@@ -361,19 +474,18 @@ document.getElementById("delete-data").addEventListener("click", () => {
   location.reload();
 });
 
-/* Log out: forget who you are and your Claude key, keep the food */
+/* Log out: forget your name and email on this device. Food and shopping list stay. */
 document.getElementById("log-out").addEventListener("click", () => {
-  if (!confirm("Log out? This removes your name, email and Claude API key from this device. Your food stays.")) return;
+  if (!confirm("Log out? This removes your name and email from this device. Your food and shopping list stay.")) return;
   profile = { ...DEFAULT_PROFILE, theme: profile.theme };
   saveProfile();
-  setClaudeKey("");
   profileForm.hidden = true;
   renderProfile();
   showToast("You're logged out");
 });
 
 /* =========================================================
-   6. HOME SCREEN
+   7. HOME SCREEN
    ========================================================= */
 function renderHome() {
   const hour = new Date().getHours();
@@ -383,14 +495,15 @@ function renderHome() {
   const attention = items.filter(needsAttention);
   document.getElementById("home-count").textContent = `${items.length} ${items.length === 1 ? "item" : "items"}`;
   document.getElementById("home-attention").textContent =
-    attention.length === 0 ? "Everything looks fresh"
+    items.length === 0 ? "Tap here to add your first food"
+    : attention.length === 0 ? "Everything looks fresh"
     : `${attention.length} ${attention.length === 1 ? "item needs" : "items need"} your attention`;
 
   const list = document.getElementById("expiring-list");
   const soonest = attention.sort((a, b) => daysUntil(a.expires) - daysUntil(b.expires));
 
   if (soonest.length === 0) {
-    list.innerHTML = `<div class="empty-card">Nothing is expiring in the next ${SOON_DAYS} days 🎉</div>`;
+    list.innerHTML = `<div class="empty-card">${items.length ? `Nothing is expiring in the next ${SOON_DAYS} days 🎉` : "Add food to see what's expiring soon."}</div>`;
   } else {
     const shown = soonest.slice(0, 3);
     list.innerHTML = shown.map((item) => {
@@ -416,7 +529,27 @@ function renderHome() {
     }
   }
 
-  renderShoppingList();
+  // Best recipe for you right now
+  const best = rankedRecipes()[0];
+  const top = document.getElementById("home-top-recipe");
+  if (!best || best.have.length === 0) {
+    top.innerHTML = `<a class="empty-card empty-card--link" href="#recipes">Add some food to get recipe ideas. <strong>Browse recipes →</strong></a>`;
+  } else {
+    top.innerHTML = `
+      <a class="pick-card" href="#recipe/${encodeURIComponent(best.recipe.id)}">
+        ${recipePicture(best.recipe, "pick-card__picture")}
+        <span class="pick-card__text">
+          <span class="pick-card__name">${esc(best.recipe.name)}</span>
+          <span class="pick-card__reason">${esc(best.reason)}</span>
+          <span class="pick-card__meta">${matchSummary(best)} · ${totalMinutes(best.recipe)} min</span>
+        </span>
+      </a>`;
+  }
+
+  const count = shoppingList.length;
+  document.getElementById("home-shopping-link").innerHTML = count
+    ? `🛒 <strong>${count} ${count === 1 ? "item" : "items"}</strong> on your shopping list <span aria-hidden="true">→</span>`
+    : `🛒 Your shopping list is empty <span aria-hidden="true">→</span>`;
 }
 
 document.getElementById("expiring-list").addEventListener("click", (event) => {
@@ -431,7 +564,7 @@ function removeItem(id, refresh) {
   saveItems();
   refresh();
   showToast(`Removed ${removed.name}`, () => {
-    items.splice(index, 0, removed);
+    items.splice(Math.min(index, items.length), 0, removed);
     saveItems();
     refresh();
   });
@@ -455,40 +588,8 @@ function addFoodByName(name) {
   return item;
 }
 
-/* --- Shopping list --- */
-function renderShoppingList() {
-  const box = document.getElementById("shopping-list");
-  if (shoppingList.length === 0) {
-    box.innerHTML = `<div class="empty-card empty-card--small">Nothing to buy. Missing recipe ingredients will show up here.</div>`;
-    return;
-  }
-  box.innerHTML = `<ul class="shopping">${shoppingList.map((entry) => `
-    <li>
-      <span class="shopping__name">${esc(entry.name)}${entry.recipe ? `<small>for ${esc(entry.recipe)}</small>` : ""}</span>
-      <button class="shopping__got" type="button" data-bought="${esc(entry.id)}" aria-label="Bought ${esc(entry.name)}">✓</button>
-      <button class="shopping__remove" type="button" data-unlist="${esc(entry.id)}" aria-label="Remove ${esc(entry.name)} from list">×</button>
-    </li>`).join("")}</ul>`;
-}
-
-document.getElementById("shopping-list").addEventListener("click", (event) => {
-  const bought = event.target.closest("[data-bought]");
-  const unlist = event.target.closest("[data-unlist]");
-  const id = (bought || unlist || {}).dataset?.bought || (unlist && unlist.dataset.unlist);
-  if (!id) return;
-  const entry = shoppingList.find((e) => e.id === id);
-  shoppingList = shoppingList.filter((e) => e.id !== id);
-  saveShopping();
-  if (bought && entry) {
-    const item = addFoodByName(entry.name);
-    renderHome();
-    showToast(`${item.name} added to your fridge`, () => { location.hash = "#fridge/" + encodeURIComponent(item.id); }, "See it");
-  } else {
-    renderHome();
-  }
-});
-
 /* =========================================================
-   7. MY FRIDGE SCREEN
+   8. MY FRIDGE SCREEN
    ========================================================= */
 const fridgeView = { category: "All", search: "", sort: "expiration" };
 const SORTS = [
@@ -523,7 +624,7 @@ function renderFridgeList(highlightId) {
   } else if (fridgeView.sort === "name") {
     shown.sort((a, b) => a.name.localeCompare(b.name));
   } else {
-    shown.sort((a, b) => b.added - a.added);
+    shown.sort((a, b) => (b.added || 0) - (a.added || 0));
   }
 
   document.getElementById("fridge-count").textContent = `Your Items (${items.length})`;
@@ -531,11 +632,11 @@ function renderFridgeList(highlightId) {
 
   const list = document.getElementById("fridge-list");
   if (items.length === 0) {
-    list.innerHTML = `<p class="empty-text">Your fridge is empty. Tap “+ Add Food” to add something.</p>`;
+    list.innerHTML = `<p class="empty-text">Your fridge is empty.<br>Tap “+ Add Food” below to add your first item.</p>`;
     return;
   }
   if (shown.length === 0) {
-    list.innerHTML = `<p class="empty-text">No food matches your search.</p>`;
+    list.innerHTML = `<p class="empty-text">No food matches “${esc(fridgeView.search.trim()) || fridgeView.category}”.</p>`;
     return;
   }
 
@@ -543,13 +644,15 @@ function renderFridgeList(highlightId) {
     const tag = statusTag(item);
     const amount = item.quantity ? `${item.quantity} ${item.unit || ""}`.trim() : "";
     const details = [item.storage, amount].filter(Boolean).join(" · ");
+    const editLink = `#edit-food/${encodeURIComponent(item.id)}`;
     return `
       <div class="item ${item.id === highlightId ? "is-highlighted" : ""}" id="item-${esc(item.id)}">
-        ${foodPicture(item, "item__photo")}
+        <a href="${editLink}" class="item__photo-link" aria-label="Edit ${esc(item.name)}">${foodPicture(item, "item__photo")}</a>
         <div class="item__info">
-          <p class="item__name">${esc(item.name)}</p>
+          <a class="item__name" href="${editLink}">${esc(item.name)}</a>
           <p class="item__details">${esc(details)}</p>
           <span class="tag ${tag.style}">${tag.text}</span>
+          <a class="item__edit" href="${editLink}">Edit</a>
           <a class="item__recipes" href="#recipes/${encodeURIComponent(item.name)}">Recipes →</a>
         </div>
         <button class="item__remove" type="button" data-remove="${esc(item.id)}" aria-label="Remove ${esc(item.name)}">✓<span>Used</span></button>
@@ -557,8 +660,8 @@ function renderFridgeList(highlightId) {
   }).join("");
 
   if (highlightId) {
-    const row = document.getElementById("item-" + highlightId);
-    if (row) row.scrollIntoView({ block: "center" });
+    pendingScrollTarget = document.getElementById("item-" + highlightId);
+    scrollToTarget();
   }
 }
 
@@ -594,7 +697,8 @@ document.getElementById("reset-example").addEventListener("click", () => {
 });
 
 /* =========================================================
-   8. ADD FOOD SCREEN
+   9. ADD / EDIT FOOD SCREEN
+   The same form is used to add new food and to edit food you already have.
    ========================================================= */
 const form = document.getElementById("add-food-form");
 const nameInput = document.getElementById("food-name");
@@ -606,19 +710,54 @@ const expiresInput = document.getElementById("food-expires");
 const expiryHint = document.getElementById("expiry-hint");
 const suggestions = document.getElementById("food-suggestions");
 let browseCategory = "Popular";
+let editingId = null;   // the food being edited, or null when adding
 
 categorySelect.insertAdjacentHTML("beforeend", CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join(""));
 storageSelect.insertAdjacentHTML("beforeend", STORAGE_PLACES.map((s) => `<option>${esc(s)}</option>`).join(""));
 unitSelect.innerHTML = UNITS.map((u) => `<option>${esc(u)}</option>`).join("");
-expiresInput.min = dateFromToday(-30);
 
-function prepareAddFood() {
-  renderBrowse();
+function prepareFoodForm(editId) {
   hideSuggestions();
+  form.querySelectorAll(".has-error").forEach(clearError);
+  const editing = editId ? items.find((item) => item.id === editId) : null;
+
+  if (editId && !editing) {
+    showToast("That food isn't in your fridge anymore");
+    location.replace("#fridge");
+    return;
+  }
+
+  // Switching between adding and editing starts with a clean form
+  if ((editing ? editing.id : null) !== editingId || editing) resetFoodForm();
+  editingId = editing ? editing.id : null;
+
+  document.getElementById("food-form-title").textContent = editing ? "Edit Food" : "Add Food";
+  document.getElementById("food-form-subtitle").textContent = editing ? "Update the details below" : "Keep your fridge organized";
+  document.getElementById("food-submit").textContent = editing ? "Save Changes" : "+ Add to My Fridge";
+  document.getElementById("food-delete").hidden = !editing;
+  document.getElementById("browse-card").hidden = Boolean(editing);
+
+  if (editing) {
+    nameInput.value = editing.name;
+    categorySelect.value = CATEGORIES.includes(editing.category) ? editing.category : "Other";
+    storageSelect.value = STORAGE_PLACES.includes(editing.storage) ? editing.storage : "Fridge";
+    quantityInput.value = editing.quantity ?? "";
+    unitSelect.value = UNITS.includes(editing.unit) ? editing.unit : UNITS[0];
+    expiresInput.value = editing.expires || "";
+  } else {
+    renderBrowse();
+  }
+}
+
+function resetFoodForm() {
+  form.reset();
+  categorySelect.value = "";
+  storageSelect.value = "";
+  expiryHint.textContent = "";
 }
 
 const POPULAR = ["Milk", "Eggs", "Chicken breast", "Bread", "Cheese", "Yogurt", "Apples", "Bananas",
-                 "Broccoli", "Carrots", "Spinach", "Ground beef", "Salmon", "Butter", "Tomatoes", "Orange juice"];
+                 "Broccoli", "Carrots", "Spinach", "Ground beef", "Rice", "Pasta", "Tomatoes", "Tortillas"];
 
 function renderBrowse() {
   document.getElementById("browse-chips").innerHTML = ["Popular", ...CATEGORIES].map((c) =>
@@ -659,12 +798,12 @@ function chooseFood(food) {
   expiresInput.value = dateFromToday(food.days);
   updateExpiryHint();
   hideSuggestions();
-  [nameInput, categorySelect, storageSelect].forEach(clearError);
+  [nameInput, categorySelect, storageSelect, expiresInput].forEach(clearError);
 }
 
 function updateExpiryHint() {
   const food = findCatalogFood(nameInput.value);
-  if (food && storageSelect.value === food.storage) {
+  if (!editingId && food && storageSelect.value === food.storage) {
     expiryHint.textContent = `Suggested: usually good for about ${readableDays(food.days)} in the ${food.storage.toLowerCase()}. Change it if your package says otherwise.`;
   } else {
     expiryHint.textContent = "";
@@ -705,7 +844,7 @@ nameInput.addEventListener("input", () => {
   clearError(nameInput);
   showSuggestions();
   const exact = findCatalogFood(nameInput.value);
-  if (exact) {
+  if (exact && !editingId) {
     if (!categorySelect.value) categorySelect.value = exact.category;
     if (!storageSelect.value) storageSelect.value = exact.storage;
     if (!expiresInput.value) expiresInput.value = dateFromToday(exact.days);
@@ -724,7 +863,7 @@ suggestions.addEventListener("mousedown", (event) => {
 
 storageSelect.addEventListener("change", () => {
   const food = findCatalogFood(nameInput.value);
-  if (food) {
+  if (food && !editingId) {
     let days = food.days;
     if (storageSelect.value !== food.storage) {
       if (storageSelect.value === "Freezer") days = Math.max(food.days, 90);
@@ -748,76 +887,87 @@ function clearError(input) {
   if (old) old.remove();
 }
 
-[categorySelect, storageSelect].forEach((select) => select.addEventListener("change", () => clearError(select)));
+[categorySelect, storageSelect, expiresInput, quantityInput].forEach((input) => input.addEventListener("change", () => clearError(input)));
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const name = nameInput.value.trim();
+  const quantity = quantityInput.value === "" ? null : Number(quantityInput.value);
+  const expiresDays = daysUntil(expiresInput.value);
   let ok = true;
   if (!name) { showError(nameInput, "Please enter a food name"); ok = false; }
   if (!categorySelect.value) { showError(categorySelect, "Please choose a category"); ok = false; }
   if (!storageSelect.value) { showError(storageSelect, "Please choose where it's stored"); ok = false; }
+  if (quantityInput.value !== "" && !(quantity > 0)) { showError(quantityInput, "Quantity must be more than 0"); ok = false; }
+  if (expiresInput.value && expiresDays === null) { showError(expiresInput, "Please enter a valid date"); ok = false; }
   if (!ok) {
     form.querySelector(".has-error").focus();
     return;
   }
 
   const known = findCatalogFood(name);
-  const item = {
-    id: newId(),
+  const details = {
     name: known ? known.name : name.charAt(0).toUpperCase() + name.slice(1),
     category: categorySelect.value,
     storage: storageSelect.value,
-    quantity: quantityInput.value ? Number(quantityInput.value) : null,
-    unit: quantityInput.value ? unitSelect.value : "",
+    quantity,
+    unit: quantity ? unitSelect.value : "",
     expires: expiresInput.value || null,
-    added: Date.now(),
   };
 
-  items.push(item);
+  let item;
+  if (editingId) {
+    item = items.find((i) => i.id === editingId);
+    if (!item) { showToast("That food isn't in your fridge anymore"); location.hash = "#fridge"; return; }
+    Object.assign(item, details);
+    showToast(`Saved changes to ${item.name}`);
+  } else {
+    item = { id: newId(), ...details, added: Date.now() };
+    items.push(item);
+    // If it was on the shopping list, you've bought it: take it off
+    shoppingList = shoppingList.filter((e) => !ingredientMatchesFood(e.name, item.name) && simplify(e.name) !== simplify(item.name));
+    saveShopping();
+    showToast(`Added ${item.name} to your fridge`);
+  }
   saveItems();
 
-  // If this was on the shopping list, take it off
-  shoppingList = shoppingList.filter((e) => simplify(e.name) !== simplify(item.name));
-  saveShopping();
-
-  form.reset();
-  categorySelect.value = "";
-  storageSelect.value = "";
-  expiryHint.textContent = "";
-
-  showToast(`Added ${item.name} to your fridge`);
+  resetFoodForm();
+  editingId = null;
   location.hash = "#fridge/" + encodeURIComponent(item.id);
 });
 
+document.getElementById("food-delete").addEventListener("click", () => {
+  const item = items.find((i) => i.id === editingId);
+  if (!item) return;
+  if (!confirm(`Delete ${item.name} from your fridge?`)) return;
+  editingId = null;
+  resetFoodForm();
+  location.hash = "#fridge";
+  removeItem(item.id, () => renderFridge());
+});
+
 /* =========================================================
-   9. RECIPE FINDER
+   10. RECIPE FINDER
    ========================================================= */
 const recipeView = { filter: "all" };
 const recipeSearch = document.getElementById("recipe-search");
-const generateButton = document.getElementById("generate-recipes");
-let generating = false;
-
-/* Is this ingredient in your fridge? (e.g. "Cheddar Cheese" matches "Cheese") */
-function simplify(name) {
-  return String(name).toLowerCase().trim().replace(/(es|s)$/, "");
-}
-
-function findInFridge(ingredientName) {
-  const wanted = simplify(ingredientName);
-  if (!wanted) return undefined;
-  return items.find((item) => {
-    const have = simplify(item.name);
-    return have === wanted || wanted.includes(have) || have.includes(wanted);
-  });
-}
+const FILTER_LABELS = { "all": "All recipes", "can-make": "Can make now", "use-soon": "Use before lose" };
 
 function recipeMatchesSearch(recipe, search) {
   if (!search) return true;
-  const text = [recipe.name, ...recipe.ingredients.map((i) => i.name)].join(" ").toLowerCase();
-  return text.includes(search) ||
-    recipe.ingredients.some((i) => simplify(search).includes(simplify(i.name)) || simplify(i.name).includes(simplify(search)));
+  const wanted = simplify(search);
+  if (recipe.name.toLowerCase().includes(search)) return true;
+  return recipe.ingredients.some((i) =>
+    i.name.toLowerCase().includes(search) || ingredientMatchesFood(i.name, search) || simplify(i.name) === wanted);
+}
+
+function passesFilter(match) {
+  const filter = recipeView.filter;
+  if (filter === "all") return true;
+  if (filter === "can-make") return match.missing.length === 0;
+  if (filter === "use-soon") return match.usesExpiring.length > 0;
+  return match.recipe.categories.includes(filter);
 }
 
 function openRecipeFinder(ingredient) {
@@ -828,57 +978,39 @@ function openRecipeFinder(ingredient) {
 function renderRecipes() {
   const searchText = recipeSearch.value.trim();
   const search = searchText.toLowerCase();
-  const soonItems = items.filter(needsAttention);
+  const shown = rankedRecipes().filter((match) => passesFilter(match) && recipeMatchesSearch(match.recipe, search));
 
-  const shown = allRecipes().filter((recipe) => {
-    let matchesFilter = true;
-    if (recipeView.filter === "use-soon") {
-      matchesFilter = recipe.ingredients.some((i) => soonItems.includes(findInFridge(i.name)));
-    } else if (recipeView.filter !== "all") {
-      matchesFilter = (recipe.tags || []).includes(recipeView.filter);
-    }
-    return recipeMatchesSearch(recipe, search) && matchesFilter;
-  });
-
-  // Small line under the filters when you're searching
   const status = document.getElementById("recipes-status");
-  status.hidden = !searchText;
+  const filterName = FILTER_LABELS[recipeView.filter] || recipeView.filter;
   status.innerHTML = searchText
-    ? `Recipes with “${esc(searchText)}” <button class="text-button text-button--inline" type="button" data-clear-search>Clear</button>`
-    : "";
-
-  // The Claude button changes to match what you're looking at
-  if (!generating) {
-    generateButton.textContent = searchText
-      ? `✨ Ask Claude for recipes with ${searchText}`
-      : "✨ Get new recipe ideas from Claude";
-  }
+    ? `${shown.length} ${shown.length === 1 ? "recipe" : "recipes"} with “${esc(searchText)}” <button class="text-button text-button--inline" type="button" data-clear-search>Clear</button>`
+    : `${shown.length} ${shown.length === 1 ? "recipe" : "recipes"} · ${esc(filterName)} · best matches for your fridge first`;
 
   const list = document.getElementById("recipe-list");
   if (shown.length === 0) {
-    list.innerHTML = `
-      <div class="empty-card">
-        No saved recipes${searchText ? ` with “${esc(searchText)}”` : " match this filter"} yet.<br>
-        Tap the ✨ button above and Claude will create some.
-      </div>`;
+    let message = "No recipes match this filter yet.";
+    if (recipeView.filter === "can-make") message = "You can't make any recipe with only what you have yet. Try “All” to see what's close.";
+    if (recipeView.filter === "use-soon") message = "None of your food is expiring in the next 3 days, so nothing needs using up. 🎉";
+    if (searchText) message = `No recipes use “${esc(searchText)}”. Try another ingredient.`;
+    list.innerHTML = `<div class="empty-card">${message}</div>`;
     return;
   }
 
-  list.innerHTML = shown.map((recipe) => {
-    const have = recipe.ingredients.filter((i) => findInFridge(i.name)).length;
-    const tags = (recipe.tags || []).slice(0, 3).map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("");
+  list.innerHTML = shown.map((match) => {
+    const recipe = match.recipe;
+    const tags = recipe.categories.slice(0, 3).map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("");
+    const link = `#recipe/${encodeURIComponent(recipe.id)}`;
     return `
-      <div class="recipe-card">
-        <a href="#recipe/${encodeURIComponent(recipe.id)}" class="recipe-card__picture-link">${recipePicture(recipe, "recipe-card__photo")}</a>
-        <div class="recipe-card__footer">
-          <p class="recipe-card__name">${esc(recipe.name)}</p>
-          <p class="recipe-card__have">You have ${have} of ${recipe.ingredients.length} ingredients · ${esc(recipe.time)}${recipe.byClaude ? " · ✨ by Claude" : ""}</p>
-          ${tags ? `<p class="recipe-card__tags">${tags}</p>` : ""}
-          <a class="recipe-card__button" href="#recipe/${encodeURIComponent(recipe.id)}">
-            View Recipe <img src="images/arrow-right.svg" alt="" class="arrow">
-          </a>
-        </div>
-      </div>`;
+      <a class="recipe-card" href="${link}" aria-label="${esc(recipe.name)}">
+        ${recipePicture(recipe, "recipe-card__photo")}
+        <span class="recipe-card__footer">
+          <span class="recipe-card__name">${esc(recipe.name)}</span>
+          <span class="recipe-card__reason ${match.usesExpiring.length ? "is-urgent" : ""}">${esc(match.reason)}</span>
+          <span class="recipe-card__have">${matchSummary(match)} · ${totalMinutes(recipe)} min · ${esc(recipe.difficulty)}</span>
+          <span class="recipe-card__tags">${tags}</span>
+          <span class="recipe-card__button">View Recipe <img src="images/arrow-right.svg" alt="" class="arrow"></span>
+        </span>
+      </a>`;
   }).join("");
 }
 
@@ -900,195 +1032,168 @@ document.getElementById("recipe-chips").addEventListener("click", (event) => {
   renderRecipes();
 });
 
-/* Ask Claude for new recipes */
-generateButton.addEventListener("click", async () => {
-  if (generating) return;
-  if (!getClaudeKey()) {
-    showClaudeProblem(new ClaudeProblem("Add your Claude API key on the Profile screen to get recipe ideas.", true));
-    return;
-  }
-
-  const focus = recipeSearch.value.trim();
-  const filterNames = { "use-soon": "Use Before Lose", "High Protein": "High Protein", "Vegetarian": "Vegetarian" };
-  const fridge = items.map((item) => ({ name: item.name, daysLeft: daysUntil(item.expires) }));
-
-  setGenerating(true, "Claude is cooking up ideas… this can take up to a minute.");
-  try {
-    const recipes = await generateRecipes(fridge, { focus, filter: filterNames[recipeView.filter], count: 3 });
-    const cleaned = recipes.map(cleanClaudeRecipe).filter(Boolean);
-    if (cleaned.length === 0) throw new ClaudeProblem("Claude didn't come back with any recipes. Please try again.");
-    myRecipes = [...cleaned, ...myRecipes];
-    saveRecipes();
-    renderRecipes();
-    showToast(`Claude made ${cleaned.length} new recipe${cleaned.length === 1 ? "" : "s"} for you`);
-    document.getElementById("recipe-list").scrollIntoView({ behavior: "smooth", block: "start" });
-  } catch (error) {
-    showClaudeProblem(error);
-  } finally {
-    setGenerating(false);
-  }
-});
-
-function setGenerating(on, note) {
-  generating = on;
-  generateButton.disabled = on;
-  generateButton.classList.toggle("is-loading", on);
-  if (on) generateButton.textContent = "Asking Claude…";
-  document.getElementById("generate-note").textContent =
-    note || "Claude looks at what's in your fridge, especially food expiring soon.";
-  if (!on) renderRecipes();
-}
-
-/* Makes sure a recipe from Claude has everything the app needs */
-function cleanClaudeRecipe(recipe) {
-  if (!recipe || typeof recipe.name !== "string" || !Array.isArray(recipe.ingredients)) return null;
-  const text = (value, max) => String(value ?? "").trim().slice(0, max);
-  return {
-    id: newId("claude"),
-    byClaude: true,
-    name: text(recipe.name, 80) || "Recipe",
-    emoji: text(recipe.emoji, 8) || "🍽️",
-    description: text(recipe.description, 300),
-    time: text(recipe.time, 20) || "—",
-    servings: Number.isFinite(recipe.servings) ? recipe.servings : 2,
-    difficulty: ["Easy", "Medium", "Hard"].includes(recipe.difficulty) ? recipe.difficulty : "Easy",
-    tags: Array.isArray(recipe.tags) ? recipe.tags.filter((t) => RECIPE_TAGS.includes(t)) : [],
-    ingredients: recipe.ingredients
-      .filter((i) => i && i.name)
-      .map((i) => ({ name: text(i.name, 60), amount: text(i.amount, 40) })),
-    steps: Array.isArray(recipe.steps) ? recipe.steps.map((s) => text(s, 600)).filter(Boolean) : [],
-    created: Date.now(),
-  };
-}
-
 /* =========================================================
-   10. RECIPE DETAILS
+   11. RECIPE DETAILS
    ========================================================= */
 let currentRecipeId = null;
-let loadingSteps = false;
-
-function findRecipe(id) {
-  const recipes = allRecipes();
-  return recipes.find((r) => r.id === id) || recipes[recipes.length - 1];
-}
 
 function renderRecipe(recipeId) {
-  const recipe = findRecipe(recipeId);
+  const recipe = RECIPE_DATABASE.find((r) => r.id === recipeId);
+  if (!recipe) {
+    showToast("That recipe couldn't be found");
+    location.replace("#recipes");
+    return;
+  }
   currentRecipeId = recipe.id;
+  const match = matchRecipe(recipe);
 
-  const heroSource = recipe.heroPhoto ? { ...recipe, photo: recipe.heroPhoto } : recipe;
-  document.getElementById("recipe-hero-wrap").innerHTML = recipePicture(heroSource, "recipe-hero");
+  document.getElementById("recipe-hero-wrap").innerHTML = recipePicture(recipe, "recipe-hero", true);
   document.getElementById("recipe-name").textContent = recipe.name;
-  const description = document.getElementById("recipe-description");
-  description.textContent = recipe.description || "";
-  description.hidden = !recipe.description;
-  document.getElementById("recipe-time").textContent = recipe.time;
+  const reason = document.getElementById("recipe-reason");
+  reason.textContent = match.reason;
+  reason.classList.toggle("is-urgent", match.usesExpiring.length > 0);
+  document.getElementById("recipe-categories").innerHTML =
+    recipe.categories.map((c) => `<span class="mini-tag">${esc(c)}</span>`).join("");
+
+  document.getElementById("recipe-time").textContent = `${totalMinutes(recipe)} min`;
   document.getElementById("recipe-servings").textContent = recipe.servings;
   document.getElementById("recipe-difficulty").textContent = recipe.difficulty;
+  document.getElementById("recipe-have-count").textContent = `(${match.have.length} of ${match.total} in your fridge)`;
 
   document.getElementById("recipe-ingredients").innerHTML = recipe.ingredients.map((ingredient) => {
-    const have = findInFridge(ingredient.name);
+    const food = findInFridge(ingredient.name);
+    let tag = food ? `<span class="tag tag--yes">Have</span>` : `<span class="tag tag--no">Missing</span>`;
+    if (!food && ingredient.optional) tag = `<span class="tag tag--none">Optional</span>`;
+    if (food && expiringSoon(food)) tag = `<span class="tag tag--soon">Use soon</span>`;
     return `
       <li>
-        <span>${esc(ingredient.name)}<br>${esc(ingredient.amount)}</span>
-        <span class="tag ${have ? "tag--yes" : "tag--no"}">${have ? "Yes" : "No"}</span>
+        <span>${esc(ingredient.name)}${ingredient.optional ? " <small>(optional)</small>" : ""}<br>${esc(ingredient.amount)}</span>
+        ${tag}
       </li>`;
   }).join("");
 
-  const missing = recipe.ingredients.filter((i) => !findInFridge(i.name)).length;
+  const missing = match.missing.length;
   document.getElementById("add-missing").textContent = missing
     ? `+ Add ${missing} Missing Item${missing === 1 ? "" : "s"} to Shopping List`
     : "✓ You have everything for this recipe";
 
-  // Instructions start hidden; "Cooking Instructions" shows them (asking Claude if needed)
-  document.getElementById("steps-card").hidden = true;
-  updateStepsButton(recipe);
-  document.getElementById("delete-recipe").hidden = !recipe.byClaude;
-}
-
-function updateStepsButton(recipe) {
-  const button = document.getElementById("show-steps");
-  if (loadingSteps) return;
-  const showing = !document.getElementById("steps-card").hidden;
-  button.textContent = showing ? "Hide Cooking Instructions"
-    : recipe.steps && recipe.steps.length ? "Cooking Instructions"
-    : "✨ Cooking Instructions (written by Claude)";
-}
-
-function showSteps(recipe) {
+  document.getElementById("recipe-time-detail").textContent =
+    `Prep ${recipe.prepMinutes} min · Cook ${recipe.cookMinutes} min · Serves ${recipe.servings}`;
   document.getElementById("recipe-steps").innerHTML = recipe.steps.map((step) => `<li>${esc(step)}</li>`).join("");
-  const card = document.getElementById("steps-card");
-  card.hidden = false;
-  updateStepsButton(recipe);
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-document.getElementById("show-steps").addEventListener("click", async () => {
-  if (loadingSteps) return;
-  const recipe = findRecipe(currentRecipeId);
-  const card = document.getElementById("steps-card");
-
-  if (!card.hidden) {           // already showing: hide them
-    card.hidden = true;
-    updateStepsButton(recipe);
-    return;
-  }
-  if (recipe.steps && recipe.steps.length) {
-    showSteps(recipe);
-    return;
-  }
-
-  // No instructions yet: ask Claude to write them, then save them
-  const button = document.getElementById("show-steps");
-  loadingSteps = true;
-  button.disabled = true;
-  button.classList.add("is-loading");
-  button.textContent = "Claude is writing the steps…";
-  try {
-    const steps = (await generateInstructions(recipe)).map((s) => s.slice(0, 600));
-    if (steps.length === 0) throw new ClaudeProblem("Claude didn't send any steps. Please try again.");
-    const mine = myRecipes.find((r) => r.id === recipe.id);
-    if (mine) mine.steps = steps;
-    else builtInSteps[recipe.id] = steps;
-    saveRecipes();
-    loadingSteps = false;
-    if (currentRecipeId === recipe.id && readAddress().name === "recipe") showSteps({ ...recipe, steps });
-  } catch (error) {
-    showClaudeProblem(error);
-  } finally {
-    loadingSteps = false;
-    button.disabled = false;
-    button.classList.remove("is-loading");
-    updateStepsButton(findRecipe(currentRecipeId));
-  }
+document.getElementById("show-steps").addEventListener("click", () => {
+  document.getElementById("steps-card").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("add-missing").addEventListener("click", () => {
-  const recipe = findRecipe(currentRecipeId);
-  const missing = recipe.ingredients.filter((i) => !findInFridge(i.name));
+  const recipe = RECIPE_DATABASE.find((r) => r.id === currentRecipeId);
+  if (!recipe) return;
+  const missing = matchRecipe(recipe).missing;
   if (missing.length === 0) {
     showToast("You already have everything. Time to cook! 🍳");
     return;
   }
   const added = missing.filter((i) => !shoppingList.some((e) => simplify(e.name) === simplify(i.name)));
-  added.forEach((i) => shoppingList.push({ id: newId("shop"), name: i.name, recipe: recipe.name }));
+  added.forEach((i) => shoppingList.push({ id: newId("shop"), name: i.name, amount: i.amount, recipe: recipe.name }));
   saveShopping();
   showToast(
-    added.length ? `Added ${added.map((i) => i.name).join(", ")} to your shopping list` : "Those are already on your shopping list",
-    () => { location.hash = "#home"; setTimeout(() => document.getElementById("shopping-list").scrollIntoView({ block: "center" }), 50); },
+    added.length ? `Added ${listNames(added.map((i) => i.name))} to your shopping list` : "Those are already on your shopping list",
+    () => { location.hash = "#shopping"; },
     "View list"
   );
 });
 
-document.getElementById("delete-recipe").addEventListener("click", () => {
-  const recipe = findRecipe(currentRecipeId);
-  if (!recipe.byClaude || !confirm(`Delete “${recipe.name}”?`)) return;
-  myRecipes = myRecipes.filter((r) => r.id !== recipe.id);
-  saveRecipes();
-  location.hash = "#recipes";
-  showToast("Recipe deleted");
+/* =========================================================
+   12. SHOPPING LIST
+   ========================================================= */
+const shoppingInput = document.getElementById("shopping-add-input");
+const shoppingError = document.getElementById("shopping-add-error");
+
+document.getElementById("shopping-suggestions").innerHTML =
+  FOOD_CATALOG.map((food) => `<option value="${esc(food.name)}"></option>`).join("");
+
+function updateShoppingBadge() {
+  const badge = document.getElementById("shopping-badge");
+  badge.textContent = shoppingList.length > 9 ? "9+" : shoppingList.length;
+  badge.hidden = shoppingList.length === 0;
+}
+
+function renderShopping() {
+  document.getElementById("shopping-count").textContent = `To Buy (${shoppingList.length})`;
+  document.getElementById("shopping-clear").hidden = shoppingList.length === 0;
+  const box = document.getElementById("shopping-list");
+  if (shoppingList.length === 0) {
+    box.innerHTML = `<p class="empty-text">Your shopping list is empty.<br>Add items above, or tap “Add Missing Items” on any recipe.</p>`;
+    return;
+  }
+  box.innerHTML = `<ul class="shopping">${shoppingList.map((entry) => `
+    <li>
+      <span class="shopping__name">${esc(entry.name)}${entry.amount ? ` <em>${esc(entry.amount)}</em>` : ""}${entry.recipe ? `<small>for ${esc(entry.recipe)}</small>` : ""}</span>
+      <button class="shopping__got" type="button" data-bought="${esc(entry.id)}" aria-label="Bought ${esc(entry.name)}">✓</button>
+      <button class="shopping__remove" type="button" data-unlist="${esc(entry.id)}" aria-label="Remove ${esc(entry.name)} from list">×</button>
+    </li>`).join("")}</ul>`;
+}
+
+document.getElementById("shopping-add-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const typed = shoppingInput.value.trim();
+  shoppingError.hidden = true;
+  if (!typed) {
+    shoppingError.textContent = "Type the name of something to buy";
+    shoppingError.hidden = false;
+    shoppingInput.focus();
+    return;
+  }
+  const known = findCatalogFood(typed);
+  const name = known ? known.name : typed.charAt(0).toUpperCase() + typed.slice(1);
+  if (shoppingList.some((e) => simplify(e.name) === simplify(name))) {
+    shoppingError.textContent = `${name} is already on your list`;
+    shoppingError.hidden = false;
+    return;
+  }
+  shoppingList.push({ id: newId("shop"), name });
+  saveShopping();
+  shoppingInput.value = "";
+  renderShopping();
+});
+
+shoppingInput.addEventListener("input", () => { shoppingError.hidden = true; });
+
+document.getElementById("shopping-list").addEventListener("click", (event) => {
+  const bought = event.target.closest("[data-bought]");
+  const unlist = event.target.closest("[data-unlist]");
+  if (!bought && !unlist) return;
+  const id = bought ? bought.dataset.bought : unlist.dataset.unlist;
+  const index = shoppingList.findIndex((e) => e.id === id);
+  if (index === -1) return;
+  const [entry] = shoppingList.splice(index, 1);
+  saveShopping();
+
+  if (bought) {
+    const item = addFoodByName(entry.name);
+    renderShopping();
+    showToast(`${item.name} moved to My Fridge`, () => { location.hash = "#edit-food/" + encodeURIComponent(item.id); }, "Edit");
+  } else {
+    renderShopping();
+    showToast(`Removed ${entry.name}`, () => {
+      shoppingList.splice(Math.min(index, shoppingList.length), 0, entry);
+      saveShopping();
+      renderShopping();
+    });
+  }
+});
+
+document.getElementById("shopping-clear").addEventListener("click", () => {
+  if (!confirm("Remove everything from your shopping list?")) return;
+  const old = shoppingList;
+  shoppingList = [];
+  saveShopping();
+  renderShopping();
+  showToast("Shopping list cleared", () => { shoppingList = old; saveShopping(); renderShopping(); });
 });
 
 /* Start the app */
 applyTheme();
+updateShoppingBadge();
 showScreen();

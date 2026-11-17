@@ -1,10 +1,9 @@
 /*
   FridgeIQ data
   -------------
-  This file holds the LISTS the app uses:
+  This file holds the LISTS the app uses (recipes are in js/recipes.js):
     1. FOOD_CATALOG  – foods you can pick from on the Add Food screen
-    2. RECIPES       – recipes shown on the Recipes screens
-    3. EXAMPLE_ITEMS – the food your fridge starts with the first time you open the app
+    2. EXAMPLE_ITEMS – the food your fridge starts with the first time you open the app
 
   To add a new food choice, copy one line in FOOD_CATALOG and change it.
     name     – what it's called
@@ -166,27 +165,15 @@ const FOOD_CATALOG = [
   { name: "Honey",            emoji: "🍯", category: "Other", storage: "Pantry",  days: 730 },
   { name: "Frozen pizza",     emoji: "🍕", category: "Other", storage: "Freezer", days: 180 },
   { name: "Frozen waffles",   emoji: "🧇", category: "Other", storage: "Freezer", days: 180 },
-];
-
-/* Recipes. "ingredients" names are matched against your fridge to show Yes / No. */
-const RECIPES = [
-  {
-    id: "broccoli-cheddar-pasta",
-    name: "Broccoli Cheddar Pasta",
-    photo: "images/pasta-card.jpg",
-    heroPhoto: "images/pasta-hero.jpg",
-    time: "20 min",
-    servings: 2,
-    difficulty: "Easy",
-    tags: ["Vegetarian"],
-    ingredients: [
-      { name: "Pasta",          amount: "200 g" },
-      { name: "Milk",           amount: "1/2 cup" },
-      { name: "Cheddar Cheese", amount: "1/2 cup" },
-      { name: "Broccoli",       amount: "1 cup" },
-      { name: "Garlic",         amount: "2 cloves" },
-    ],
-  },
+  { name: "Granola",          emoji: "🥣", category: "Grains & Bread", storage: "Pantry", days: 90 },
+  { name: "Black beans",      emoji: "🫘", category: "Other", storage: "Pantry", days: 730 },
+  { name: "Chickpeas",        emoji: "🫘", category: "Other", storage: "Pantry", days: 730 },
+  { name: "Coconut milk",     emoji: "🥥", category: "Other", storage: "Pantry", days: 365 },
+  { name: "Chicken broth",    emoji: "🍲", category: "Other", storage: "Pantry", days: 365 },
+  { name: "Canned tomatoes",  emoji: "🥫", category: "Vegetables", storage: "Pantry", days: 730 },
+  { name: "Curry powder",     emoji: "🍛", category: "Sauces & Condiments", storage: "Pantry", days: 365 },
+  { name: "Taco seasoning",   emoji: "🌮", category: "Sauces & Condiments", storage: "Pantry", days: 365 },
+  { name: "Cinnamon",         emoji: "🟤", category: "Sauces & Condiments", storage: "Pantry", days: 730 },
 ];
 
 /*

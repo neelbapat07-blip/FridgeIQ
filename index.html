@@ -24,6 +24,9 @@
     from the food you've saved, so they change as you add and remove food.
   -->
   <div class="app">
+    <p class="storage-warning" id="storage-warning" hidden>
+      This browser is blocking saving (for example, private browsing), so your changes will be lost when you close FridgeIQ.
+    </p>
 
     <!-- ============ SCREEN 0: MY PROFILE (the app starts here) ============ -->
     <section class="screen" id="profile" data-tab="profile">
@@ -75,22 +78,6 @@
         </div>
       </div>
 
-      <h2 class="profile-heading">Recipe AI</h2>
-      <div class="white-card" id="ai-card">
-        <p class="white-card__title">Claude <span class="status-pill" id="ai-status">Not set up</span></p>
-        <p class="white-card__text">
-          FridgeIQ asks Claude to invent recipes from your food and to write cooking instructions.
-          To turn this on, paste your Claude API key. You can create one at
-          <strong>console.anthropic.com</strong> (API use is billed by Anthropic).
-        </p>
-        <form class="ai-key-form" id="ai-key-form">
-          <input class="field__input" id="ai-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…">
-          <button class="small-button" type="submit">Save key</button>
-        </form>
-        <button class="text-button text-button--left" type="button" id="ai-key-remove" hidden>Remove key</button>
-        <p class="white-card__note">Your key is saved only in this browser on this device and is sent only to Anthropic.</p>
-      </div>
-
       <h2 class="profile-heading">Account Settings</h2>
       <div class="white-card white-card--list">
         <button class="settings-row" type="button" id="privacy-toggle" aria-expanded="false">
@@ -98,7 +85,7 @@
           <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
         </button>
         <div class="privacy-panel" id="privacy-panel" hidden>
-          <p>Everything you enter (your food, shopping list, recipes, name and API key) is stored only in this browser on this device. Nothing is sent anywhere, except recipe requests, which go to Anthropic's Claude.</p>
+          <p>Everything you enter (your food, shopping list and profile) is stored only in this browser on this device. FridgeIQ doesn't send your data anywhere.</p>
           <button class="small-button small-button--danger" type="button" id="delete-data">Delete all my data</button>
         </div>
         <button class="settings-row" type="button" id="log-out">
@@ -124,9 +111,11 @@
 
       <div id="expiring-list"><!-- filled in by js/app.js --></div>
 
-      <h2 class="section-heading section-heading--spaced">Shopping List</h2>
-      <p class="section-note">Missing recipe ingredients you've saved. Tap ✓ when you buy one to add it to your fridge.</p>
-      <div id="shopping-list"><!-- filled in by js/app.js --></div>
+      <h2 class="section-heading section-heading--spaced">Recipe Pick for You</h2>
+      <p class="section-note">Based on what's in your fridge right now</p>
+      <div id="home-top-recipe"><!-- filled in by js/app.js --></div>
+
+      <a class="shopping-link" id="home-shopping-link" href="#shopping"><!-- filled in by js/app.js --></a>
     </section>
 
     <!-- ============ SCREEN 2: MY FRIDGE ============ -->
@@ -158,11 +147,11 @@
 
     <!-- ============ SCREEN 3: ADD FOOD ============ -->
     <section class="screen" id="add-food" data-tab="fridge">
-      <h1 class="title">Add Food</h1>
-      <p class="subtitle">Keep your fridge organized</p>
+      <h1 class="title" id="food-form-title">Add Food</h1>
+      <p class="subtitle" id="food-form-subtitle">Keep your fridge organized</p>
 
       <!-- Quick picks: tap a food to fill in the form below -->
-      <div class="browse-card">
+      <div class="browse-card" id="browse-card">
         <p class="browse-card__title">Quick pick <span class="browse-card__hint">Tap a food to fill in the form</span></p>
         <div class="chips" id="browse-chips"><!-- filled in by js/app.js --></div>
         <div class="browse-grid" id="browse-grid"><!-- filled in by js/app.js --></div>
@@ -212,7 +201,8 @@
         </div>
       </form>
 
-      <button class="big-button" type="submit" form="add-food-form">+ Add to My Fridge</button>
+      <button class="big-button" type="submit" form="add-food-form" id="food-submit">+ Add to My Fridge</button>
+      <button class="text-button text-button--danger" type="button" id="food-delete" hidden>Delete this food</button>
     </section>
 
     <!-- ============ SCREEN 4: RECIPE FINDER ============ -->
@@ -227,18 +217,17 @@
 
       <div class="chips" id="recipe-chips">
         <button class="chip is-selected" data-filter="all" type="button">All</button>
+        <button class="chip" data-filter="can-make" type="button">Can Make Now</button>
         <button class="chip" data-filter="use-soon" type="button">Use Before Lose</button>
-        <button class="chip" data-filter="High Protein" type="button">High Protein</button>
+        <button class="chip" data-filter="Breakfast" type="button">Breakfast</button>
+        <button class="chip" data-filter="Lunch" type="button">Lunch</button>
+        <button class="chip" data-filter="Dinner" type="button">Dinner</button>
         <button class="chip" data-filter="Vegetarian" type="button">Vegetarian</button>
+        <button class="chip" data-filter="High Protein" type="button">High Protein</button>
+        <button class="chip" data-filter="Quick" type="button">Quick</button>
       </div>
 
-      <!-- Ask Claude for new recipes -->
-      <div class="ai-generate">
-        <button class="green-button ai-generate__button" type="button" id="generate-recipes">✨ Get new recipe ideas from Claude</button>
-        <p class="ai-generate__note" id="generate-note">Claude looks at what's in your fridge, especially food expiring soon.</p>
-      </div>
-
-      <p class="recipes-status" id="recipes-status" hidden></p>
+      <p class="recipes-status" id="recipes-status"><!-- filled in by js/app.js --></p>
       <div id="recipe-list"><!-- filled in by js/app.js --></div>
     </section>
 
@@ -247,7 +236,8 @@
       <div class="recipe-hero-wrap" id="recipe-hero-wrap"><!-- photo or emoji, filled in by js/app.js --></div>
 
       <h1 class="title title--recipe" id="recipe-name">Broccoli Cheddar Pasta</h1>
-      <p class="recipe-description" id="recipe-description"></p>
+      <p class="recipe-reason" id="recipe-reason"></p>
+      <p class="recipe-categories" id="recipe-categories"></p>
 
       <div class="stats">
         <div class="stat"><p class="stat__value" id="recipe-time">20 min</p><p class="stat__label">Time</p></div>
@@ -255,20 +245,41 @@
         <div class="stat"><p class="stat__value" id="recipe-difficulty">Easy</p><p class="stat__label">Difficulty</p></div>
       </div>
 
-      <h2 class="ingredients-heading">Ingredients</h2>
+      <h2 class="ingredients-heading">Ingredients <span class="ingredients-heading__count" id="recipe-have-count"></span></h2>
       <ul class="ingredients" id="recipe-ingredients"><!-- filled in by js/app.js --></ul>
 
       <button class="green-button" type="button" id="add-missing">+ Add Missing Items to Shopping List</button>
       <button class="green-button" type="button" id="show-steps">Cooking Instructions</button>
 
-      <!-- Step-by-step instructions (written by Claude) -->
-      <div class="steps-card" id="steps-card" hidden>
+      <!-- Step-by-step instructions -->
+      <div class="steps-card" id="steps-card">
         <h2 class="steps-card__title">Cooking Instructions</h2>
+        <p class="steps-card__time" id="recipe-time-detail"></p>
         <ol class="steps" id="recipe-steps"></ol>
-        <p class="steps-card__credit">Written by Claude. Check cooking times and food safety as you go.</p>
+        <p class="steps-card__credit">Salt, pepper and cooking oil are assumed. Always cook meat, fish and eggs until done.</p>
       </div>
+    </section>
 
-      <button class="text-button" type="button" id="delete-recipe" hidden>Delete this recipe</button>
+    <!-- ============ SCREEN 6: SHOPPING LIST ============ -->
+    <section class="screen" id="shopping" data-tab="shopping">
+      <h1 class="title">Shopping List</h1>
+      <p class="subtitle">What you need to buy</p>
+
+      <form class="shopping-add" id="shopping-add-form" novalidate>
+        <input class="field__input" id="shopping-add-input" type="text" list="shopping-suggestions" maxlength="40" placeholder="Add an item, e.g. Rice" autocomplete="off">
+        <datalist id="shopping-suggestions"><!-- filled in by js/app.js --></datalist>
+        <button class="small-button" type="submit">Add</button>
+      </form>
+      <p class="field__error" id="shopping-add-error" hidden></p>
+
+      <div class="items-card shopping-card">
+        <div class="items-card__header">
+          <p id="shopping-count">To Buy (0)</p>
+          <button class="items-card__sort" type="button" id="shopping-clear" hidden>Clear list</button>
+        </div>
+        <div id="shopping-list"><!-- filled in by js/app.js --></div>
+      </div>
+      <p class="section-note shopping-help">Tap ✓ when you buy something: it moves into My Fridge with a suggested expiration date.</p>
     </section>
 
     <!-- ============ BOTTOM NAVIGATION BAR (shared by every screen) ============ -->
@@ -285,6 +296,12 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM2 10h2M20 10h2M9 7V5M12 7V4M15 7V5"/></svg>
         <span>Recipes</span>
       </a>
+      <a class="tab" href="#shopping" data-tab="shopping">
+        <!-- shopping bag icon -->
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2zM9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span>Shopping</span>
+        <span class="tab__badge" id="shopping-badge" hidden>0</span>
+      </a>
     </nav>
 
     <!-- Small pop-up message (e.g. "Added Milk", "Coming soon") -->
@@ -294,10 +311,8 @@
     </div>
   </div>
 
-  <!-- Anthropic's official Claude library, packed into one file (see js/vendor/) -->
-  <script src="js/vendor/anthropic-sdk.js"></script>
   <script src="js/data.js"></script>
-  <script src="js/claude.js"></script>
+  <script src="js/recipes.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

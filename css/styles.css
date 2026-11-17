@@ -638,7 +638,7 @@ img { display: block; max-width: 100%; }
 }
 
 /* =========================================================
-   Profile, profile button, Claude features
+   Profile, profile button, recipes, shopping
    ========================================================= */
 
 /* Profile button: top-right of every screen */
@@ -766,20 +766,6 @@ img { display: block; max-width: 100%; }
 .theme-tile__swatches i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); }
 .theme-tile.is-selected { border-width: 2.5px; font-weight: 600; }
 
-.status-pill {
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: #ececec;
-  font-size: 11px;
-  font-weight: 600;
-  color: #555;
-}
-.status-pill.is-on { background: var(--tag-green); color: var(--tag-yes-text); }
-
-.ai-key-form { display: flex; gap: 8px; margin-top: 12px; }
-.ai-key-form .field__input { margin-top: 0; height: 36px; background: #f3f3f3; font-size: 14px; }
-.text-button--left { margin: 8px 0 0; padding: 0; }
-
 .white-card--list { padding: 0; overflow: hidden; }
 .settings-row {
   display: flex;
@@ -835,9 +821,6 @@ img { display: block; max-width: 100%; }
 .item__recipes { margin-left: 8px; font-size: 12px; font-weight: 600; color: var(--link-red); }
 
 /* ---------- Recipe Finder ---------- */
-.ai-generate { margin-top: 14px; }
-.ai-generate__button { height: auto; min-height: 44px; padding: 10px 14px; margin-top: 0; font-weight: 600; }
-.ai-generate__note { margin-top: 6px; font-size: 12px; color: #444; text-align: center; }
 .recipes-status { margin-top: 14px; font-size: 14px; font-weight: 600; }
 .text-button--inline { display: inline; margin: 0 0 0 6px; padding: 0; }
 #recipe-list { margin-top: 14px; }
@@ -855,27 +838,8 @@ img { display: block; max-width: 100%; }
 }
 .recipe-card__photo.recipe-emoji { aspect-ratio: 337 / 180; }
 
-/* Loading spinner on buttons while Claude works */
-.is-loading { position: relative; opacity: 0.85; cursor: progress; }
-.is-loading::before {
-  content: "";
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  margin-right: 8px;
-  vertical-align: -2px;
-  border: 2px solid rgba(0, 0, 0, 0.25);
-  border-top-color: #000;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-button:disabled { cursor: progress; }
-
 /* ---------- Recipe Details ---------- */
 .recipe-hero-wrap .recipe-hero.recipe-emoji { font-size: 110px; }
-.recipe-description { margin-top: 6px; font-size: 15px; line-height: 20px; color: #333; }
-.recipe-description[hidden] { display: none; }
 .green-button { font-weight: 500; }
 .steps-card {
   margin-top: 18px;
@@ -909,3 +873,130 @@ button:disabled { cursor: progress; }
   text-align: center;
 }
 .steps-card__credit { margin-top: 12px; font-size: 11px; color: var(--muted); }
+.steps-card__time { margin-top: 4px; font-size: 13px; color: #555; }
+
+/* =========================================================
+   Built-in recipes, Shopping tab, editing food
+   ========================================================= */
+
+/* Warning when the browser can't save */
+.storage-warning {
+  margin: 0;
+  padding: 10px 14px;
+  background: #fff3c4;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Bottom bar with four tabs */
+.tab-bar { padding: 0 4px env(safe-area-inset-bottom); }
+.tab {
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  height: 52px;
+  min-width: 72px;
+  padding: 0 10px;
+  border-radius: 18px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+.tab svg { width: 22px; height: 22px; }
+.tab__badge {
+  position: absolute;
+  top: 3px;
+  right: 14px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+/* Small helpers */
+.text-button--danger { color: #c2272d; }
+.empty-card--link { display: block; }
+.empty-card--link strong { display: block; margin-top: 6px; }
+
+/* ---------- Home: recipe pick + shopping link ---------- */
+.pick-card {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 7px;
+  border-radius: 12px;
+  background: var(--card);
+}
+.pick-card:active { filter: brightness(0.95); }
+.pick-card__picture {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.pick-card__picture.recipe-emoji { font-size: 52px; }
+.pick-card__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-top: 4px; }
+.pick-card__name { font-size: 17px; font-weight: 600; line-height: 21px; }
+.pick-card__reason { font-size: 13px; line-height: 17px; color: #2d5a1e; }
+.pick-card__meta { font-size: 12px; color: #444; }
+
+.shopping-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 14px 14px;
+  border-radius: 12px;
+  background: var(--white);
+  font-size: 15px;
+}
+.shopping-link span { margin-left: auto; }
+.shopping-link:active { filter: brightness(0.96); }
+
+/* ---------- My Fridge: tap a food to edit ---------- */
+.item__photo-link { display: block; flex-shrink: 0; border-radius: 10px; }
+.item__name { display: block; }
+.item__edit {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* ---------- Recipe Finder: whole card is a link ---------- */
+a.recipe-card { display: block; }
+a.recipe-card:active { filter: brightness(0.96); }
+.recipe-card + .recipe-card { margin-top: 16px; }
+.recipe-card__footer { display: block; }
+.recipe-card__name { display: block; font-size: 16px; font-weight: 600; }
+.recipe-card__reason { display: block; margin-top: 4px; font-size: 13px; line-height: 17px; color: #2d5a1e; }
+.recipe-card__reason.is-urgent, .recipe-reason.is-urgent { color: #a3410f; font-weight: 600; }
+.recipe-card__have { display: block; margin-top: 4px; font-size: 12px; color: #444; }
+.recipe-card__tags:empty { display: none; }
+.recipe-card__button { margin-top: 8px; }
+.recipe-card__photo.recipe-emoji { aspect-ratio: 337 / 150; font-size: 72px; }
+
+/* ---------- Recipe Details ---------- */
+.recipe-reason { margin-top: 6px; font-size: 15px; line-height: 20px; color: #2d5a1e; }
+.recipe-categories { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.recipe-categories .mini-tag { font-size: 11px; padding: 2px 8px; }
+.ingredients-heading__count { font-size: 13px; font-weight: 500; color: #444; }
+.ingredients small { font-size: 11px; color: var(--muted); }
+
+/* ---------- Shopping screen ---------- */
+.shopping-add { display: flex; gap: 8px; margin-top: 14px; }
+.shopping-add .field__input { margin-top: 0; height: 40px; }
+.shopping-add .small-button { height: 40px; }
+#shopping-add-error { margin-top: 6px; }
+.shopping-card { margin-top: 16px; }
+.shopping-card .shopping { margin-top: 6px; }
+.shopping__name em { font-style: normal; font-size: 12px; color: #555; }
+.shopping-help { margin-top: 10px; color: #444; }
