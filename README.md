@@ -7,6 +7,38 @@ FridgeIQ runs entirely in the browser. There's no account, no server, no AI serv
 and no paid API. Your food, shopping list and profile are saved in the browser on
 your device.
 
+## Where your data is saved
+
+Everything is saved in the browser's **localStorage**, which belongs to this website,
+in that one browser, on that one device:
+
+- **Each browser and device has its own separate data.** Your phone, your laptop, and a
+  friend's phone each have their own fridge. Nothing is shared or synced.
+- **Nothing is sent to a server.** The only thing loaded from the internet is the font.
+- **It saves automatically** every time you add, edit or delete food, change the shopping
+  list, or change your profile, theme, sort order or recipe filter.
+- **It loads automatically** when you open the app, and survives refreshing and closing the browser.
+- **New users start with an empty fridge.** The food list in `js/data.js` only provides
+  choices for the Add Food screen.
+- **Open in two tabs?** They stay in sync and never overwrite each other.
+
+| Saved under | What |
+|---|---|
+| `fridgeiq.items.v1` | Food: names, categories, storage, quantities, units, expiration dates |
+| `fridgeiq.shopping.v1` | Shopping list |
+| `fridgeiq.profile.v1` | Name, email, colour theme |
+| `fridgeiq.prefs.v1` | Sort order and filters |
+
+**If something goes wrong**, a yellow message appears at the top:
+- *Saving is blocked* (e.g. private browsing): the app works but can't keep changes.
+- *Storage is full*: the latest change wasn't saved, and everything saved before is untouched.
+- *Saved data couldn't be read*: readable entries are kept and the original is copied to a
+  `.backup` entry, so nothing is silently erased.
+
+To remove everything: **Profile → Privacy Settings → Delete all my data**. This only affects the
+current browser. Data stored by a different website address (for example the GitHub Pages link
+vs. the Vercel link) is separate, even on the same phone.
+
 ## How to open it
 
 Download the project, **extract the ZIP** (right-click → Extract All), then double-click
@@ -64,7 +96,8 @@ Salt, pepper, cooking oil and water are assumed to be in every kitchen.
 |---|---|
 | `index.html` | The **content**: all the screens, their text, pictures and buttons |
 | `css/styles.css` | The **looks**: colours, sizes, spacing. The colours at the top come from Figma |
-| `js/data.js` | The **food list** for Add Food, and the starting example food |
+| `js/storage.js` | **Saving and loading**: the only file that touches the browser's storage, with safety checks |
+| `js/data.js` | The **food choices** for Add Food (not anyone's actual food) |
 | `js/recipes.js` | The **recipe database**. Copy one recipe block to add a new recipe |
 | `js/app.js` | The **behaviour**: saving, recipe matching, and what every button does |
 | `images/` | Photos and arrows from the Figma file |
@@ -76,4 +109,3 @@ Salt, pepper, cooking oil and water are assumed to be in every kitchen.
   `image: { photo: "images/your-photo.jpg" }` on that recipe.
 - The cheese and yogurt photos look like stock-photo previews. Replace them before
   launching publicly.
-- Data is saved per browser and device. It isn't shared between your phone and computer.

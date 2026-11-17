@@ -1000,3 +1000,18 @@ a.recipe-card:active { filter: brightness(0.96); }
 .shopping-card .shopping { margin-top: 6px; }
 .shopping__name em { font-style: normal; font-size: 12px; color: #555; }
 .shopping-help { margin-top: 10px; color: #444; }
+
+/* Storage warning banner: one message per line, optional OK button */
+.storage-warning span { display: block; }
+.storage-warning span + span { margin-top: 6px; }
+.storage-warning__close {
+  margin-top: 6px;
+  padding: 4px 14px;
+  border: 1px solid #000;
+  border-radius: 10px;
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.item__edit, .item__recipes { white-space: nowrap; }

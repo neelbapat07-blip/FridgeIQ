@@ -24,9 +24,8 @@
     from the food you've saved, so they change as you add and remove food.
   -->
   <div class="app">
-    <p class="storage-warning" id="storage-warning" hidden>
-      This browser is blocking saving (for example, private browsing), so your changes will be lost when you close FridgeIQ.
-    </p>
+    <!-- Shows a message if this browser can't save FridgeIQ data (filled in by js/app.js) -->
+    <p class="storage-warning" id="storage-warning" role="alert" hidden></p>
 
     <!-- ============ SCREEN 0: MY PROFILE (the app starts here) ============ -->
     <section class="screen" id="profile" data-tab="profile">
@@ -142,7 +141,6 @@
       </div>
 
       <a class="big-button" href="#add-food">+ Add Food</a>
-      <button class="text-button" id="reset-example" type="button">Reset to example food</button>
     </section>
 
     <!-- ============ SCREEN 3: ADD FOOD ============ -->
@@ -306,6 +304,7 @@
     </div>
   </div>
 
+  <script src="js/storage.js"></script>
   <script src="js/data.js"></script>
   <script src="js/recipes.js"></script>
   <script src="js/app.js"></script>

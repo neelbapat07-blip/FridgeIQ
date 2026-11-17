@@ -2,8 +2,10 @@
   FridgeIQ data
   -------------
   This file holds the LISTS the app uses (recipes are in js/recipes.js):
-    1. FOOD_CATALOG  – foods you can pick from on the Add Food screen
-    2. EXAMPLE_ITEMS – the food your fridge starts with the first time you open the app
+    FOOD_CATALOG – foods you can pick from on the Add Food screen
+
+  These are only CHOICES. Your actual food is saved separately in your own
+  browser (see js/storage.js), and every new user starts with an empty fridge.
 
   To add a new food choice, copy one line in FOOD_CATALOG and change it.
     name     – what it's called
@@ -174,23 +176,4 @@ const FOOD_CATALOG = [
   { name: "Curry powder",     emoji: "🍛", category: "Sauces & Condiments", storage: "Pantry", days: 365 },
   { name: "Taco seasoning",   emoji: "🌮", category: "Sauces & Condiments", storage: "Pantry", days: 365 },
   { name: "Cinnamon",         emoji: "🟤", category: "Sauces & Condiments", storage: "Pantry", days: 730 },
-];
-
-/*
-  The food your fridge starts with (matches the Figma designs).
-  "daysLeft" is turned into a real date counted from today.
-*/
-const EXAMPLE_ITEMS = [
-  { name: "Milk",     category: "Dairy",          storage: "Fridge", daysLeft: 1 },
-  { name: "Broccoli", category: "Vegetables",     storage: "Fridge", daysLeft: 2 },
-  { name: "Apples",   category: "Fruits",         storage: "Fridge", daysLeft: 20 },
-  { name: "Cheese",   category: "Dairy",          storage: "Fridge", daysLeft: 18 },
-  { name: "Yogurt",   category: "Dairy",          storage: "Fridge", daysLeft: 9 },
-  { name: "Pasta",    category: "Grains & Bread", storage: "Pantry", daysLeft: 200 },
-  { name: "Eggs",     category: "Dairy",          storage: "Fridge", daysLeft: 14 },
-  { name: "Chicken breast", category: "Meats",    storage: "Fridge", daysLeft: 5 },
-  { name: "Carrots",  category: "Vegetables",     storage: "Fridge", daysLeft: 15 },
-  { name: "Butter",   category: "Dairy",          storage: "Fridge", daysLeft: 25 },
-  { name: "Orange juice", category: "Drinks",     storage: "Fridge", daysLeft: 6 },
-  { name: "Bread",    category: "Grains & Bread", storage: "Counter", daysLeft: 4 },
 ];

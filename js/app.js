@@ -24,79 +24,56 @@
 
 /* =========================================================
    1. SAVING & LOADING
+   All saving goes through js/storage.js. Your data stays in this browser only.
    ========================================================= */
-const KEYS = {
-  items:    "fridgeiq.items.v1",
-  profile:  "fridgeiq.profile.v1",
-  shopping: "fridgeiq.shopping.v1",
-};
-
-/* Data from older versions of FridgeIQ that is no longer used (AI recipes and an API key) */
-const RETIRED_KEYS = ["fridgeiq.claudeKey.v1", "fridgeiq.recipes.v1", "fridgeiq.steps.v1"];
-
-/* Can this browser save data? (Private browsing or blocked cookies can stop it.) */
-const storageWorks = (() => {
-  try {
-    const test = "fridgeiq.test";
-    localStorage.setItem(test, "1");
-    localStorage.removeItem(test);
-    RETIRED_KEYS.forEach((key) => localStorage.removeItem(key));
-    return true;
-  } catch (error) {
-    return false;
-  }
-})();
-
-function load(key, fallback) {
-  if (!storageWorks) return fallback;
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return value === null ? fallback : value;
-  } catch (error) {
-    return fallback;   // saved data was damaged: start fresh for this part
-  }
-}
-
-let saveWarningShown = false;
-function save(key, value) {
-  if (!storageWorks) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    // Usually means the browser's storage is full
-    if (!saveWarningShown) {
-      saveWarningShown = true;
-      setTimeout(() => showToast("Couldn't save your latest change. Your browser's storage may be full."), 0);
-    }
-  }
-}
-
 const DEFAULT_PROFILE = { name: "", email: "", theme: "green" };
+const DEFAULT_PREFS = { fridgeSort: "expiration", fridgeCategory: "All", recipeFilter: "all", browseCategory: "Popular" };
 
-let items = asArray(load(KEYS.items, null)) || makeExampleItems();
-let profile = { ...DEFAULT_PROFILE, ...load(KEYS.profile, {}) };
-let shoppingList = asArray(load(KEYS.shopping, [])) || [];
+let items, shoppingList, profile, prefs;
 
-const saveItems = () => save(KEYS.items, items);
-const saveProfile = () => save(KEYS.profile, profile);
-const saveShopping = () => { save(KEYS.shopping, shoppingList); updateShoppingBadge(); };
+/* Reads everything from this browser's storage (on start, and when another tab changes it) */
+function loadAllData() {
+  items = FridgeStorage.load(STORAGE_KEYS.items, "food list", (d) => cleanList(d, cleanFoodItem), []);
+  shoppingList = FridgeStorage.load(STORAGE_KEYS.shopping, "shopping list", (d) => cleanList(d, cleanShoppingEntry), []);
+  profile = { ...DEFAULT_PROFILE, ...FridgeStorage.load(STORAGE_KEYS.profile, "profile", cleanObject, {}) };
+  prefs = { ...DEFAULT_PREFS, ...FridgeStorage.load(STORAGE_KEYS.prefs, "preferences", cleanObject, {}) };
+  profile.name = cleanText(profile.name, 40);
+  profile.email = cleanText(profile.email, 80);
+}
+loadAllData();
 
-function asArray(value) {
-  return Array.isArray(value) ? value.filter((x) => x && typeof x.name === "string") : null;
+const saveItems = () => FridgeStorage.save(STORAGE_KEYS.items, items);
+const saveProfile = () => FridgeStorage.save(STORAGE_KEYS.profile, profile);
+const savePrefs = () => FridgeStorage.save(STORAGE_KEYS.prefs, prefs);
+const saveShopping = () => { const ok = FridgeStorage.save(STORAGE_KEYS.shopping, shoppingList); updateShoppingBadge(); return ok; };
+
+/* The yellow banner at the top explains any saving problem until it's fixed */
+function showStorageStatus(status) {
+  const banner = document.getElementById("storage-warning");
+  const messages = [];
+  if (status.saveProblem === "blocked") {
+    messages.push("This browser is blocking storage (for example, private browsing), so FridgeIQ can't save. Your changes will be lost when you close it.");
+  } else if (status.saveProblem === "full") {
+    messages.push("Your last change couldn't be saved because this browser's storage is full. Everything saved before is still safe. Try removing some items, or free up space in your browser settings.");
+  }
+  if (status.readProblems.length) {
+    messages.push(`Some saved data (${listNames(status.readProblems)}) couldn't be fully read. Anything readable was kept, and a backup copy of the original was saved on this device.`);
+  }
+  banner.hidden = messages.length === 0;
+  banner.innerHTML = messages.map((m) => `<span>${esc(m)}</span>`).join("") +
+    (status.readProblems.length && !status.saveProblem ? ` <button class="storage-warning__close" type="button" id="storage-dismiss">OK</button>` : "");
 }
 
-function makeExampleItems() {
-  return EXAMPLE_ITEMS.map((example, index) => ({
-    id: "example-" + index,
-    name: example.name,
-    category: example.category,
-    storage: example.storage,
-    quantity: null,
-    unit: "",
-    expires: dateFromToday(example.daysLeft),
-    added: Date.now() - index * 1000,
-  }));
-}
+FridgeStorage.onStatusChange(showStorageStatus);
+
+/* If FridgeIQ is open in another tab and you change something there, update this tab too
+   (so the two tabs never overwrite each other's changes). */
+FridgeStorage.onOtherTabChange(() => {
+  loadAllData();
+  applyTheme();
+  updateShoppingBadge();
+  refreshCurrentScreen();
+});
 
 function newId(prefix) {
   return (prefix || "item") + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
@@ -231,7 +208,9 @@ toastAction.addEventListener("click", () => {
   toast.classList.remove("is-visible");
 });
 
-document.getElementById("storage-warning").hidden = storageWorks;
+document.getElementById("storage-warning").addEventListener("click", (event) => {
+  if (event.target.id === "storage-dismiss") FridgeStorage.dismissReadProblems();
+});
 
 /* =========================================================
    4. RECIPE MATCHING
@@ -394,6 +373,22 @@ function scrollToTarget() {
   else window.scrollTo(0, 0);
 }
 
+/* Rebuilds whatever screen is showing, keeping your place on the page */
+function refreshCurrentScreen() {
+  const { name, detail } = readAddress();
+  const id = SCREEN_ALIASES[name] || name;
+  if (id === "profile") renderProfile();
+  if (id === "home") renderHome();
+  if (id === "fridge") renderFridge();
+  if (id === "recipes") renderRecipes();
+  if (id === "recipe" && RECIPE_DATABASE.some((r) => r.id === detail)) renderRecipe(detail);
+  if (id === "shopping") renderShopping();
+  if (id === "add-food" && name === "edit-food" && !items.some((i) => i.id === detail)) {
+    showToast("This food was deleted in another tab");
+    location.replace("#fridge");
+  }
+}
+
 window.addEventListener("hashchange", showScreen);
 window.addEventListener("load", scrollToTarget);
 
@@ -466,10 +461,11 @@ document.getElementById("privacy-toggle").addEventListener("click", (event) => {
   event.currentTarget.classList.toggle("is-open", !panel.hidden);
 });
 document.getElementById("delete-data").addEventListener("click", () => {
-  if (!confirm("Delete all FridgeIQ data on this device? This removes your food, shopping list and profile, and can't be undone.")) return;
-  try {
-    Object.keys(localStorage).filter((k) => k.startsWith("fridgeiq.")).forEach((k) => localStorage.removeItem(k));
-  } catch (error) { /* nothing saved */ }
+  if (!confirm("Delete all FridgeIQ data on this device? This removes your food, shopping list, profile, preferences and any backups, and can't be undone.")) return;
+  if (!FridgeStorage.deleteEverything()) {
+    showToast("Couldn't delete the data. Try clearing this site's data in your browser settings.");
+    return;
+  }
   location.hash = "#profile";
   location.reload();
 });
@@ -591,7 +587,7 @@ function addFoodByName(name) {
 /* =========================================================
    8. MY FRIDGE SCREEN
    ========================================================= */
-const fridgeView = { category: "All", search: "", sort: "expiration" };
+const fridgeView = { category: prefs.fridgeCategory, search: "", sort: prefs.fridgeSort };
 const SORTS = [
   { key: "expiration", label: "Expiration" },
   { key: "name",       label: "Name" },
@@ -606,6 +602,7 @@ function renderFridge(highlightId) {
 function renderFridgeChips() {
   const used = CATEGORIES.filter((c) => items.some((item) => item.category === c));
   if (fridgeView.category !== "All" && !used.includes(fridgeView.category)) fridgeView.category = "All";
+  if (!SORTS.some((s) => s.key === fridgeView.sort)) fridgeView.sort = "expiration";
   document.getElementById("fridge-chips").innerHTML = ["All", ...used].map((c) =>
     `<button class="chip ${c === fridgeView.category ? "is-selected" : ""}" type="button" data-category="${esc(c)}">${esc(c)}</button>`
   ).join("");
@@ -669,6 +666,8 @@ document.getElementById("fridge-chips").addEventListener("click", (event) => {
   const chip = event.target.closest("[data-category]");
   if (!chip) return;
   fridgeView.category = chip.dataset.category;
+  prefs.fridgeCategory = fridgeView.category;
+  savePrefs();
   renderFridge();
 });
 
@@ -680,20 +679,14 @@ document.getElementById("fridge-search").addEventListener("input", (event) => {
 document.getElementById("fridge-sort").addEventListener("click", () => {
   const next = (SORTS.findIndex((s) => s.key === fridgeView.sort) + 1) % SORTS.length;
   fridgeView.sort = SORTS[next].key;
+  prefs.fridgeSort = fridgeView.sort;
+  savePrefs();
   renderFridgeList();
 });
 
 document.getElementById("fridge-list").addEventListener("click", (event) => {
   const button = event.target.closest("[data-remove]");
   if (button) removeItem(button.dataset.remove, () => renderFridge());
-});
-
-document.getElementById("reset-example").addEventListener("click", () => {
-  if (!confirm("Replace your food with the example food?")) return;
-  items = makeExampleItems();
-  saveItems();
-  renderFridge();
-  showToast("Example food restored");
 });
 
 /* =========================================================
@@ -709,7 +702,7 @@ const unitSelect = document.getElementById("food-unit");
 const expiresInput = document.getElementById("food-expires");
 const expiryHint = document.getElementById("expiry-hint");
 const suggestions = document.getElementById("food-suggestions");
-let browseCategory = "Popular";
+let browseCategory = prefs.browseCategory;
 let editingId = null;   // the food being edited, or null when adding
 
 categorySelect.insertAdjacentHTML("beforeend", CATEGORIES.map((c) => `<option>${esc(c)}</option>`).join(""));
@@ -764,6 +757,7 @@ function renderBrowse() {
     `<button class="chip ${c === browseCategory ? "is-selected" : ""}" type="button" data-browse="${esc(c)}">${esc(c)}</button>`
   ).join("");
 
+  if (browseCategory !== "Popular" && !CATEGORIES.includes(browseCategory)) browseCategory = "Popular";
   const foods = browseCategory === "Popular"
     ? POPULAR.map(findCatalogFood).filter(Boolean)
     : FOOD_CATALOG.filter((food) => food.category === browseCategory);
@@ -780,6 +774,8 @@ document.getElementById("browse-chips").addEventListener("click", (event) => {
   const chip = event.target.closest("[data-browse]");
   if (!chip) return;
   browseCategory = chip.dataset.browse;
+  prefs.browseCategory = browseCategory;
+  savePrefs();
   renderBrowse();
 });
 
@@ -921,16 +917,15 @@ form.addEventListener("submit", (event) => {
     item = items.find((i) => i.id === editingId);
     if (!item) { showToast("That food isn't in your fridge anymore"); location.hash = "#fridge"; return; }
     Object.assign(item, details);
-    showToast(`Saved changes to ${item.name}`);
   } else {
     item = { id: newId(), ...details, added: Date.now() };
     items.push(item);
     // If it was on the shopping list, you've bought it: take it off
     shoppingList = shoppingList.filter((e) => !ingredientMatchesFood(e.name, item.name) && simplify(e.name) !== simplify(item.name));
     saveShopping();
-    showToast(`Added ${item.name} to your fridge`);
   }
-  saveItems();
+  if (saveItems()) showToast(editingId ? `Saved changes to ${item.name}` : `Added ${item.name} to your fridge`);
+  else showToast(`${item.name} is in your list for now, but couldn't be saved. See the message at the top.`);
 
   resetFoodForm();
   editingId = null;
@@ -950,7 +945,7 @@ document.getElementById("food-delete").addEventListener("click", () => {
 /* =========================================================
    10. RECIPE FINDER
    ========================================================= */
-const recipeView = { filter: "all" };
+const recipeView = { filter: prefs.recipeFilter };
 const recipeSearch = document.getElementById("recipe-search");
 const FILTER_LABELS = { "all": "All recipes", "can-make": "Can make now", "use-soon": "Use before lose" };
 
@@ -976,6 +971,9 @@ function openRecipeFinder(ingredient) {
 }
 
 function renderRecipes() {
+  // Use the saved filter, or "All" if that filter no longer exists
+  if (!document.querySelector(`#recipe-chips [data-filter="${CSS.escape(recipeView.filter)}"]`)) recipeView.filter = "all";
+  document.querySelectorAll("#recipe-chips .chip").forEach((c) => c.classList.toggle("is-selected", c.dataset.filter === recipeView.filter));
   const searchText = recipeSearch.value.trim();
   const search = searchText.toLowerCase();
   const shown = rankedRecipes().filter((match) => passesFilter(match) && recipeMatchesSearch(match.recipe, search));
@@ -1028,7 +1026,8 @@ document.getElementById("recipe-chips").addEventListener("click", (event) => {
   const chip = event.target.closest("[data-filter]");
   if (!chip) return;
   recipeView.filter = chip.dataset.filter;
-  document.querySelectorAll("#recipe-chips .chip").forEach((c) => c.classList.toggle("is-selected", c === chip));
+  prefs.recipeFilter = recipeView.filter;
+  savePrefs();
   renderRecipes();
 });
 
@@ -1194,6 +1193,7 @@ document.getElementById("shopping-clear").addEventListener("click", () => {
 });
 
 /* Start the app */
+showStorageStatus(FridgeStorage.status());
 applyTheme();
 updateShoppingBadge();
 showScreen();
