@@ -1020,3 +1020,29 @@ a.recipe-card:active { filter: brightness(0.96); }
 .show-more { margin-top: 18px; }
 
 
+
+/* ---------- Your Account screen ---------- */
+a.settings-row { text-decoration: none; color: inherit; }
+.privacy-panel p + p { margin-top: 8px; }
+.account-tabs { margin-top: 16px; }
+.account-tabs .chip { flex: 1; height: 32px; font-size: 14px; }
+.account-form { margin-top: 14px; }
+.account-show { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
+.account-submit { height: 64px; margin-top: 16px; font-size: 26px; }
+.account-note { margin-top: 12px; font-size: 12px; line-height: 17px; color: #444; text-align: center; }
+.account-message {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff3c4;
+  font-size: 14px;
+  line-height: 19px;
+}
+.account-message--error { background: #ffe1df; color: #8a1712; }
+.account-message--success { background: #dcf5d2; color: #1f4d12; }
+.account-card { margin-top: 18px; }
+.account-card__label { font-size: 13px; color: #555; }
+.account-card__email { margin-top: 2px; font-size: 18px; font-weight: 600; word-break: break-all; }
+.account-card__status { margin-top: 4px; font-size: 13px; color: #2d5a1e; }
+.account-card .green-button { margin-top: 16px; }
+#account > .text-button { margin-top: 20px; }

@@ -48,6 +48,7 @@
         <input class="field__input" id="profile-name-input" type="text" maxlength="40" placeholder="e.g. Neel">
         <label class="panel__label" for="profile-email-input">Email</label>
         <input class="field__input" id="profile-email-input" type="email" maxlength="80" placeholder="e.g. you@example.com">
+        <p class="field__hint" id="profile-email-note" hidden>This is your account email, so it can't be changed here.</p>
         <div class="panel__buttons">
           <button class="small-button small-button--plain" type="button" id="profile-cancel">Cancel</button>
           <button class="small-button" type="submit">Save</button>
@@ -79,12 +80,17 @@
 
       <h2 class="profile-heading">Account Settings</h2>
       <div class="white-card white-card--list">
+        <a class="settings-row" href="#account">
+          <span id="account-row-text">Create Account / Log In</span>
+          <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
         <button class="settings-row" type="button" id="privacy-toggle" aria-expanded="false">
           Privacy Settings
           <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
         </button>
         <div class="privacy-panel" id="privacy-panel" hidden>
-          <p>Everything you enter (your food, shopping list and profile) is stored only in this browser on this device. FridgeIQ doesn't send your data anywhere.</p>
+          <p>Your food, shopping list and preferences are stored only in this browser on this device and are never uploaded.</p>
+          <p>Accounts are optional. If you create one, your name and email are stored with Supabase, the service that runs FridgeIQ accounts, so you can log in and receive account emails (like the welcome email). You can delete your account any time from the account screen.</p>
           <button class="small-button small-button--danger" type="button" id="delete-data">Delete all my data</button>
         </div>
         <button class="settings-row" type="button" id="log-out">
@@ -253,6 +259,59 @@
       </div>
     </section>
 
+    <!-- ============ YOUR ACCOUNT (opened from Profile) ============ -->
+    <section class="screen" id="account" data-tab="profile">
+      <h1 class="title" id="account-title">Create Account</h1>
+      <p class="subtitle" id="account-subtitle">Free, optional, and takes a minute</p>
+
+      <p class="account-message" id="account-unavailable" hidden>
+        Accounts aren't available right now (you may be offline). Everything else in FridgeIQ still works.
+      </p>
+
+      <!-- Shown when logged in -->
+      <div class="white-card account-card" id="account-signed-in" hidden>
+        <p class="account-card__label">Logged in as</p>
+        <p class="account-card__email" id="account-email"></p>
+        <p class="account-card__status" id="account-status"></p>
+        <button class="green-button" type="button" id="account-log-out">Log Out</button>
+        <button class="text-button text-button--danger" type="button" id="account-delete">Delete my account</button>
+      </div>
+
+      <!-- Sign up / log in / reset password forms -->
+      <div id="account-form-area">
+        <div class="chips account-tabs" id="account-tabs">
+          <button class="chip is-selected" type="button" data-mode="signup">Sign Up</button>
+          <button class="chip" type="button" data-mode="login">Log In</button>
+        </div>
+
+        <form class="form-card account-form" id="account-form" novalidate>
+          <div class="field" id="account-name-field">
+            <label class="field__label" for="account-name">Name <span class="field__optional">(optional)</span></label>
+            <input class="field__input" id="account-name" type="text" maxlength="40" autocomplete="given-name" placeholder="e.g. Neel">
+          </div>
+          <div class="field" id="account-email-field">
+            <label class="field__label" for="account-email-input">Email</label>
+            <input class="field__input" id="account-email-input" type="email" maxlength="80" autocomplete="email" placeholder="you@example.com">
+          </div>
+          <div class="field" id="account-password-field">
+            <label class="field__label" for="account-password">Password</label>
+            <input class="field__input" id="account-password" type="password" maxlength="72" autocomplete="new-password">
+            <p class="field__hint" id="account-password-hint">At least 8 characters.</p>
+            <label class="account-show"><input type="checkbox" id="account-show-password"> Show password</label>
+          </div>
+          <p class="account-message" id="account-message" role="status" hidden></p>
+          <button class="text-button text-button--left" type="button" id="account-resend" hidden>Send the welcome email again</button>
+        </form>
+
+        <button class="big-button account-submit" type="submit" form="account-form" id="account-submit">Create Account</button>
+        <button class="text-button" type="button" id="account-forgot" hidden>Forgot your password?</button>
+        <button class="text-button" type="button" id="account-back-to-login" hidden>← Back to Log In</button>
+        <p class="account-note">You don't need an account to use FridgeIQ. Your food and shopping list stay on this device either way.</p>
+      </div>
+
+      <a class="text-button" href="#profile">← Back to Profile</a>
+    </section>
+
     <!-- ============ SCREEN 6: SHOPPING LIST ============ -->
     <section class="screen" id="shopping" data-tab="shopping">
       <h1 class="title">Shopping List</h1>
@@ -305,9 +364,13 @@
   </div>
 
   <script src="js/storage.js"></script>
+  <script src="js/config.js"></script>
+  <!-- Supabase's official library for accounts (version 2.118.0), packed into one file -->
+  <script src="js/vendor/supabase.js"></script>
   <script src="js/data.js"></script>
   <script src="js/recipes.js"></script>
   <script src="js/recipes-more.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/account.js"></script>
 </body>
 </html>
