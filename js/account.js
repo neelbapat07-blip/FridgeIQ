@@ -45,7 +45,12 @@ const returnedFromEmail = (() => {
 function friendlyAuthError(error) {
   const code = (error && (error.code || error.name)) || "";
   const message = String((error && error.message) || "");
-  if (code === "AuthRetryableFetchError" || /fetch|network/i.test(message)) return "Couldn't reach the account service. Check your internet connection and try again.";
+  if (code === "AuthRetryableFetchError" || /fetch|network/i.test(message)) {
+    // Status 0 = no connection at all. 500+ = the account service answered but had a problem.
+    if (!error.status) return "Couldn't reach the account service. Check your internet connection and try again.";
+    if (/email|sending|smtp/i.test(message)) return "Your account couldn't be created because the welcome email couldn't be sent. Please try again later. (FridgeIQ's email settings may need fixing.)";
+    return `The account service had a problem (error ${error.status}). Please try again in a few minutes.`;
+  }
   if (code === "invalid_credentials") return "That email and password don't match. Check them and try again.";
   if (code === "email_not_confirmed") return "Please confirm your email first. Check your inbox for the welcome email (and your spam folder).";
   if (code === "user_already_exists" || code === "email_exists") return "There's already an account with that email. Try logging in instead.";
