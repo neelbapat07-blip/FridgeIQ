@@ -1019,21 +1019,4 @@ a.recipe-card:active { filter: brightness(0.96); }
 /* "Show more" under the recipe list */
 .show-more { margin-top: 18px; }
 
-/* Settings row that is a link (Photo Credits) */
-a.settings-row { text-decoration: none; color: inherit; }
 
-/* Photo credits screen */
-.credits-intro { margin-top: 14px; font-size: 13px; line-height: 18px; color: #333; }
-.credits-intro a, .credits-list a { text-decoration: underline; }
-.credits-list {
-  margin-top: 14px;
-  padding: 6px 14px;
-  list-style: none;
-  border-radius: 12px;
-  background: var(--white);
-}
-.credits-list li { padding: 10px 0; font-size: 12px; line-height: 17px; color: #333; }
-.credits-list li + li { border-top: 1px solid #eee; }
-.credits-list strong { display: block; font-size: 14px; color: #000; }
-.credits-list span { word-break: break-word; }
-#credits .text-button { margin-top: 18px; }

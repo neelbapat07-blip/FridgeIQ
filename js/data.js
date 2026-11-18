@@ -9,11 +9,10 @@
 
   To add a new food choice, copy one line in FOOD_CATALOG and change it.
     name     – what it's called
-    emoji    – the little picture shown when there's no photo
+    emoji    – the little picture shown for this food
     category – which group it belongs to (must be one of CATEGORIES)
     storage  – where it usually goes (must be one of STORAGE_PLACES)
     days     – roughly how many days it stays good there (used to suggest an expiration date)
-    photo    – (optional) a picture from the images folder
 */
 
 const CATEGORIES = [
@@ -52,14 +51,14 @@ const FOOD_CATALOG = [
   { name: "Canned tuna",      emoji: "🥫", category: "Seafood", storage: "Pantry",  days: 730 },
 
   // ---- Dairy & eggs ----
-  { name: "Milk",             emoji: "🥛", category: "Dairy", storage: "Fridge", days: 7,  photo: "images/milk.png" },
-  { name: "Cheese",           emoji: "🧀", category: "Dairy", storage: "Fridge", days: 21, photo: "images/cheese.png" },
-  { name: "Cheddar cheese",   emoji: "🧀", category: "Dairy", storage: "Fridge", days: 21, photo: "images/cheese.png" },
+  { name: "Milk",             emoji: "🥛", category: "Dairy", storage: "Fridge", days: 7 },
+  { name: "Cheese",           emoji: "🧀", category: "Dairy", storage: "Fridge", days: 21 },
+  { name: "Cheddar cheese",   emoji: "🧀", category: "Dairy", storage: "Fridge", days: 21 },
   { name: "Mozzarella",       emoji: "🧀", category: "Dairy", storage: "Fridge", days: 7 },
   { name: "Parmesan",         emoji: "🧀", category: "Dairy", storage: "Fridge", days: 30 },
   { name: "Cream cheese",     emoji: "🧀", category: "Dairy", storage: "Fridge", days: 14 },
-  { name: "Yogurt",           emoji: "🥣", category: "Dairy", storage: "Fridge", days: 10, photo: "images/yogurt.jpg" },
-  { name: "Greek yogurt",     emoji: "🥣", category: "Dairy", storage: "Fridge", days: 10, photo: "images/yogurt.jpg" },
+  { name: "Yogurt",           emoji: "🥣", category: "Dairy", storage: "Fridge", days: 10 },
+  { name: "Greek yogurt",     emoji: "🥣", category: "Dairy", storage: "Fridge", days: 10 },
   { name: "Butter",           emoji: "🧈", category: "Dairy", storage: "Fridge", days: 30 },
   { name: "Eggs",             emoji: "🥚", category: "Dairy", storage: "Fridge", days: 21 },
   { name: "Heavy cream",      emoji: "🥛", category: "Dairy", storage: "Fridge", days: 10 },
@@ -70,7 +69,7 @@ const FOOD_CATALOG = [
   { name: "Ice cream",        emoji: "🍨", category: "Dairy", storage: "Freezer", days: 60 },
 
   // ---- Fruits ----
-  { name: "Apples",           emoji: "🍎", category: "Fruits", storage: "Fridge",  days: 30, photo: "images/apple.jpg" },
+  { name: "Apples",           emoji: "🍎", category: "Fruits", storage: "Fridge",  days: 30 },
   { name: "Bananas",          emoji: "🍌", category: "Fruits", storage: "Counter", days: 5 },
   { name: "Oranges",          emoji: "🍊", category: "Fruits", storage: "Fridge",  days: 21 },
   { name: "Lemons",           emoji: "🍋", category: "Fruits", storage: "Fridge",  days: 21 },
@@ -90,7 +89,7 @@ const FOOD_CATALOG = [
   { name: "Frozen berries",   emoji: "🫐", category: "Fruits", storage: "Freezer", days: 240 },
 
   // ---- Vegetables ----
-  { name: "Broccoli",         emoji: "🥦", category: "Vegetables", storage: "Fridge",  days: 5, photo: "images/broccoli.png" },
+  { name: "Broccoli",         emoji: "🥦", category: "Vegetables", storage: "Fridge",  days: 5 },
   { name: "Carrots",          emoji: "🥕", category: "Vegetables", storage: "Fridge",  days: 21 },
   { name: "Lettuce",          emoji: "🥬", category: "Vegetables", storage: "Fridge",  days: 7 },
   { name: "Spinach",          emoji: "🥬", category: "Vegetables", storage: "Fridge",  days: 5 },

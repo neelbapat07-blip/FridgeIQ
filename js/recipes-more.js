@@ -2,8 +2,7 @@
   FridgeIQ recipe database, part 2
   --------------------------------
   More budget-friendly recipes, added to the list in js/recipes.js.
-  Same format as js/recipes.js. Each recipe's photo is in images/recipes/
-  (photo credits are in js/photo-credits.js).
+  Same format as js/recipes.js.
 */
 
 RECIPE_DATABASE.push(

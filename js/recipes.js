@@ -7,8 +7,7 @@
   Each recipe has:
     id          – a unique short name (no spaces)
     name        – what it's called
-    image       – an emoji picture { emoji, color }, shown if the recipe has no photo.
-                  Photos live in images/recipes/<id>.jpg and are listed in js/photo-credits.js
+    image       – the recipe's picture: an emoji on a coloured tile { emoji, color }
     categories  – any of: Breakfast, Lunch, Dinner, Snack, Vegetarian, High Protein, Quick
     prepMinutes – time to get things ready
     cookMinutes – time on the stove / in the oven
@@ -402,7 +401,7 @@ const RECIPE_DATABASE = [
   {
     id: "broccoli-cheddar-pasta",
     name: "Broccoli Cheddar Pasta",
-    image: { photo: "images/pasta-card.jpg", heroPhoto: "images/pasta-hero.jpg" },
+    image: { emoji: "🍝", color: "#fff1c7" },
     categories: ["Dinner", "Vegetarian"],
     prepMinutes: 5, cookMinutes: 15, difficulty: "Easy", servings: 2,
     ingredients: [

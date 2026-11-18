@@ -101,17 +101,10 @@ Salt, pepper, cooking oil and water are assumed to be in every kitchen.
 | `js/data.js` | The **food choices** for Add Food (not anyone's actual food) |
 | `js/recipes.js` | The **recipe database** (first 29 recipes + ingredient matching rules). Copy one recipe block to add a new recipe |
 | `js/recipes-more.js` | The **rest of the recipes** (71 more) |
-| `js/photo-credits.js` | Who took each **recipe photo** and its license (shown on Profile → Photo Credits) |
 | `js/app.js` | The **behaviour**: saving, recipe matching, and what every button does |
-| `images/` | Photos and arrows from the Figma file |
-| `images/recipes/` | One photo per recipe, from Wikimedia Commons |
+| `images/` | The two arrow icons from the Figma design |
 
 ## Notes
 
-- **Recipe photos** are free-licensed photos from Wikimedia Commons (CC0, public domain,
-  CC BY or CC BY-SA). Their licenses allow use in the app **as long as each photographer is
-  credited**, which the Photo Credits screen does. When adding or replacing a photo, add its
-  credit to `js/photo-credits.js`. Don't use photos copied from Google image search: most are
-  copyrighted. If a photo is missing, the recipe shows an emoji tile instead.
-- The cheese and yogurt photos look like stock-photo previews. Replace them before
-  launching publicly.
+- **Pictures:** every recipe and food uses an emoji on a coloured tile, so there are no
+  photo licenses to worry about. To change a recipe's picture, edit its `image` emoji or colour.

@@ -167,23 +167,10 @@ function foodPicture(item, extraClass) {
   return `<div class="photo photo--emoji ${extraClass}" role="img" aria-label="${esc(item.name)}">${emoji}</div>`;
 }
 
-/* A recipe's picture: its photo (from js/photo-credits.js or the recipe itself).
-   If there's no photo, or it fails to load, its emoji on its colour is shown instead. */
-function recipePhoto(recipe, useHero) {
+/* A recipe's picture: its emoji on its own coloured tile */
+function recipePicture(recipe, className) {
   const image = recipe.image || {};
-  if (useHero && image.heroPhoto) return image.heroPhoto;
-  if (image.photo) return image.photo;
-  const credit = typeof RECIPE_PHOTOS !== "undefined" && RECIPE_PHOTOS[recipe.id];
-  return credit ? `images/recipes/${recipe.id}.jpg` : null;
-}
-
-function recipePicture(recipe, className, useHero) {
-  const image = recipe.image || {};
-  const emojiTile = `<div class="${className} recipe-emoji" style="background:${esc(image.color || "#ffffff")}" role="img" aria-label="${esc(recipe.name)}">${image.emoji || "🍽️"}</div>`;
-  const photo = recipePhoto(recipe, useHero);
-  if (!photo) return emojiTile;
-  return `<img class="${className}" src="${esc(photo)}" alt="${esc(recipe.name)}" loading="lazy" decoding="async"
-    data-fallback="${esc(emojiTile)}" onerror="this.outerHTML = this.dataset.fallback">`;
+  return `<div class="${className} recipe-emoji" style="background:${esc(image.color || "#ffffff")}" role="img" aria-label="${esc(recipe.name)}">${image.emoji || "🍽️"}</div>`;
 }
 
 function totalMinutes(recipe) {
@@ -376,7 +363,6 @@ function showScreen() {
   if (screen.id === "recipes") openRecipeFinder(detail);
   if (screen.id === "recipe") renderRecipe(detail);
   if (screen.id === "shopping") renderShopping();
-  if (screen.id === "credits") renderCredits();
 }
 
 let pendingScrollTarget = null;   // an element to scroll to instead of the top (e.g. a new food)
@@ -1075,7 +1061,7 @@ function renderRecipe(recipeId) {
   currentRecipeId = recipe.id;
   const match = matchRecipe(recipe);
 
-  document.getElementById("recipe-hero-wrap").innerHTML = recipePicture(recipe, "recipe-hero", true);
+  document.getElementById("recipe-hero-wrap").innerHTML = recipePicture(recipe, "recipe-hero");
   document.getElementById("recipe-name").textContent = recipe.name;
   const reason = document.getElementById("recipe-reason");
   reason.textContent = match.reason;
@@ -1220,22 +1206,6 @@ document.getElementById("shopping-clear").addEventListener("click", () => {
   renderShopping();
   showToast("Shopping list cleared", () => { shoppingList = old; saveShopping(); renderShopping(); });
 });
-
-/* =========================================================
-   13. PHOTO CREDITS
-   The recipe photos are free-licensed photos from Wikimedia Commons.
-   Their licenses require crediting each photographer, which this screen does.
-   ========================================================= */
-function renderCredits() {
-  const list = document.getElementById("credits-list");
-  const entries = RECIPE_DATABASE.filter((r) => RECIPE_PHOTOS[r.id]).map((r) => [r, RECIPE_PHOTOS[r.id]]);
-  list.innerHTML = entries.map(([recipe, c]) => `
-    <li>
-      <strong>${esc(recipe.name)}</strong>
-      <span>“${esc(c.title)}” by ${esc(c.artist)}, <a href="${esc(c.licenseUrl || c.page)}" target="_blank" rel="noopener">${esc(c.license)}</a>.
-      ${c.modified ? "Cropped and resized. " : ""}<a href="${esc(c.page)}" target="_blank" rel="noopener">Source</a></span>
-    </li>`).join("");
-}
 
 /* Start the app */
 showStorageStatus(FridgeStorage.status());
