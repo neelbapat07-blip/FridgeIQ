@@ -7,8 +7,9 @@
   Each recipe has:
     id          – a unique short name (no spaces)
     name        – what it's called
-    image       – a photo from the images folder, OR an emoji picture: { emoji, color }
-    categories  – any of: Breakfast, Lunch, Dinner, Vegetarian, High Protein, Quick
+    image       – an emoji picture { emoji, color }, shown if the recipe has no photo.
+                  Photos live in images/recipes/<id>.jpg and are listed in js/photo-credits.js
+    categories  – any of: Breakfast, Lunch, Dinner, Snack, Vegetarian, High Protein, Quick
     prepMinutes – time to get things ready
     cookMinutes – time on the stove / in the oven
     difficulty  – Easy, Medium or Hard
@@ -24,7 +25,7 @@
   count as the same thing (e.g. any cheese works for "Cheese").
 */
 
-const RECIPE_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Vegetarian", "High Protein", "Quick"];
+const RECIPE_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snack", "Vegetarian", "High Protein", "Quick"];
 
 /* "If a recipe needs X, these foods in your fridge also count" */
 const INGREDIENT_ALIASES = {
@@ -45,6 +46,14 @@ const INGREDIENT_ALIASES = {
   "Tortillas":         ["Tortilla"],
   "Salad dressing":    ["Caesar dressing", "Ranch"],
   "Fresh herbs":       ["Basil", "Parsley", "Cilantro"],
+  "Tortilla chips":    ["Chips"],
+  "Chicken broth":     ["Vegetable broth"],
+  "Ground turkey":     ["Ground beef"],
+  "Steak":             ["Beef"],
+  "Rice noodles":      ["Instant noodles"],
+  "Feta":              ["Cheese"],
+  "Blueberries":       ["Berries", "Frozen berries"],
+  "Strawberries":      ["Berries"],
 };
 
 const RECIPE_DATABASE = [

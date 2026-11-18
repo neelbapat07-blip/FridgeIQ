@@ -87,6 +87,10 @@
           <p>Everything you enter (your food, shopping list and profile) is stored only in this browser on this device. FridgeIQ doesn't send your data anywhere.</p>
           <button class="small-button small-button--danger" type="button" id="delete-data">Delete all my data</button>
         </div>
+        <a class="settings-row" href="#credits">
+          Photo Credits
+          <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
         <button class="settings-row" type="button" id="log-out">
           Log Out
           <svg class="settings-row__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4"/></svg>
@@ -253,6 +257,18 @@
       </div>
     </section>
 
+    <!-- ============ PHOTO CREDITS (opened from Profile) ============ -->
+    <section class="screen" id="credits" data-tab="profile">
+      <h1 class="title">Photo Credits</h1>
+      <p class="subtitle">Recipe photos and their photographers</p>
+      <p class="credits-intro">
+        Recipe photos come from <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>
+        and are used under the free licenses shown. Broccoli Cheddar Pasta and the food photos are from the original FridgeIQ design.
+      </p>
+      <ul class="credits-list" id="credits-list"><!-- filled in by js/app.js --></ul>
+      <a class="text-button" href="#profile">← Back to Profile</a>
+    </section>
+
     <!-- ============ SCREEN 6: SHOPPING LIST ============ -->
     <section class="screen" id="shopping" data-tab="shopping">
       <h1 class="title">Shopping List</h1>
@@ -307,6 +323,8 @@
   <script src="js/storage.js"></script>
   <script src="js/data.js"></script>
   <script src="js/recipes.js"></script>
+  <script src="js/recipes-more.js"></script>
+  <script src="js/photo-credits.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
