@@ -4,8 +4,9 @@
   This file controls what happens when you TAP things, and builds the parts
   of each screen that change (lists, counts, tags).
 
-  Everything runs inside the browser: no accounts, no internet services,
-  no paid APIs. Your data is saved in this browser on this device.
+  Everything runs inside the browser, with no paid APIs. Food, shopping list and
+  preferences are saved in this browser on this device. Optional accounts
+  (sign up, log in, welcome email) are handled in js/account.js.
 
   It is split into numbered parts:
     1. Saving & loading
@@ -363,6 +364,7 @@ function showScreen() {
   if (screen.id === "recipes") openRecipeFinder(detail);
   if (screen.id === "recipe") renderRecipe(detail);
   if (screen.id === "shopping") renderShopping();
+  if (screen.id === "account" && typeof renderAccountScreen === "function") renderAccountScreen(detail);
 }
 
 let pendingScrollTarget = null;   // an element to scroll to instead of the top (e.g. a new food)
@@ -412,6 +414,8 @@ function renderProfile() {
   document.getElementById("profile-avatar").textContent =
     name ? name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase() : "?";
 
+  if (typeof renderAccountRow === "function") renderAccountRow();
+
   document.querySelectorAll("[data-theme-choice]").forEach((tile) => {
     const selected = tile.dataset.themeChoice === profile.theme;
     tile.classList.toggle("is-selected", selected);
@@ -436,7 +440,12 @@ profileForm.addEventListener("submit", (event) => {
     return;
   }
   profile.name = document.getElementById("profile-name-input").value.trim();
-  profile.email = emailInput.value.trim();
+  // With an account, the email comes from the account; the name is saved to the account too
+  if (typeof currentUser !== "undefined" && currentUser) {
+    authClient.auth.updateUser({ data: { name: profile.name } }).catch(() => {});
+  } else {
+    profile.email = emailInput.value.trim();
+  }
   saveProfile();
   profileForm.hidden = true;
   renderProfile();
@@ -468,9 +477,11 @@ document.getElementById("delete-data").addEventListener("click", () => {
   location.reload();
 });
 
-/* Log out: forget your name and email on this device. Food and shopping list stay. */
-document.getElementById("log-out").addEventListener("click", () => {
+/* Log out: sign out of the account (if any) and forget your name and email on this device.
+   Food and shopping list stay. */
+document.getElementById("log-out").addEventListener("click", async () => {
   if (!confirm("Log out? This removes your name and email from this device. Your food and shopping list stay.")) return;
+  if (typeof signOutOfAccount === "function") await signOutOfAccount();
   profile = { ...DEFAULT_PROFILE, theme: profile.theme };
   saveProfile();
   profileForm.hidden = true;

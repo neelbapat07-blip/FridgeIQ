@@ -126,11 +126,11 @@ const FridgeStorage = (() => {
     }
   }
 
-  /* Removes every piece of FridgeIQ data from this browser (including backups) */
+  /* Removes every piece of FridgeIQ data from this browser (including backups and the account login) */
   function deleteEverything() {
     try {
       Object.keys(window.localStorage)
-        .filter((key) => key.startsWith("fridgeiq."))
+        .filter((key) => key.startsWith("fridgeiq.") || key.startsWith("sb-"))   // sb- = account login on this device
         .forEach((key) => window.localStorage.removeItem(key));
       return true;
     } catch (error) {

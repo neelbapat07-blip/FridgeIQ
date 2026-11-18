@@ -3,9 +3,8 @@
 A phone-friendly website that helps you keep track of the food in your fridge
 and find recipes that use it before it goes bad.
 
-FridgeIQ runs entirely in the browser. There's no account, no server, no AI service
-and no paid API. Your food, shopping list and profile are saved in the browser on
-your device.
+FridgeIQ runs in the browser, with no paid services. Your food, shopping list and
+preferences are saved in the browser on your device. Accounts are optional (see below).
 
 ## Where your data is saved
 
@@ -14,7 +13,7 @@ in that one browser, on that one device:
 
 - **Each browser and device has its own separate data.** Your phone, your laptop, and a
   friend's phone each have their own fridge. Nothing is shared or synced.
-- **Nothing is sent to a server.** The only thing loaded from the internet is the font.
+- **Your food data is never sent to a server.** (If you create an account, only your name and email are stored with Supabase.)
 - **It saves automatically** every time you add, edit or delete food, change the shopping
   list, or change your profile, theme, sort order or recipe filter.
 - **It loads automatically** when you open the app, and survives refreshing and closing the browser.
@@ -74,6 +73,41 @@ Download the project, **extract the ZIP** (right-click → Extract All), then do
 - **Profile:** your name (used in the greeting), 4 colour schemes, privacy settings
   (Delete all my data) and Log Out.
 
+## Accounts and the welcome email (optional)
+
+FridgeIQ works without an account. People who want one can tap
+**Profile → Create Account / Log In**. Accounts are run by **Supabase** (free plan):
+
+- **Sign up** stores the person's name and email with Supabase and sends a **welcome email**
+  with a "Confirm my email" button. The email's wording is set in the Supabase dashboard
+  (Authentication → Emails → Templates → *Confirm signup*), and it's sent through the Gmail
+  account set up under Authentication → Emails → SMTP Settings.
+- **Log in, log out, forgot password** and **delete my account** are on the account screen.
+- **Only name and email** go to Supabase. Food, shopping list and preferences still stay
+  in the browser on each device.
+
+The public Supabase address and *publishable* key are in `js/config.js`. They are meant
+to be public. **Never** put the secret/service_role key or any password in the app.
+
+### One-time setup for "Delete my account"
+Supabase doesn't let apps delete accounts until you allow it. In the Supabase dashboard,
+open **SQL Editor → New query**, paste this, and click **Run**:
+
+```sql
+create or replace function public.delete_user()
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  delete from auth.users where id = auth.uid();
+$$;
+revoke execute on function public.delete_user() from public, anon;
+grant execute on function public.delete_user() to authenticated;
+```
+
+It only lets a logged-in person delete **their own** account.
+
 ## How recipe matching works
 
 For each recipe, FridgeIQ checks every required ingredient against My Fridge
@@ -97,6 +131,9 @@ Salt, pepper, cooking oil and water are assumed to be in every kitchen.
 |---|---|
 | `index.html` | The **content**: all the screens, their text, pictures and buttons |
 | `css/styles.css` | The **looks**: colours, sizes, spacing. The colours at the top come from Figma |
+| `js/account.js` | **Optional accounts**: sign up, log in, password reset, delete account |
+| `js/config.js` | The public Supabase address and publishable key |
+| `js/vendor/supabase.js` | Supabase's official library (v2.118.0), packed into one file |
 | `js/storage.js` | **Saving and loading**: the only file that touches the browser's storage, with safety checks |
 | `js/data.js` | The **food choices** for Add Food (not anyone's actual food) |
 | `js/recipes.js` | The **recipe database** (first 29 recipes + ingredient matching rules). Copy one recipe block to add a new recipe |
