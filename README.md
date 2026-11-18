@@ -64,7 +64,8 @@ Download the project, **extract the ZIP** (right-click → Extract All), then do
   which fills in the category, storage and a suggested expiration date. Any other food can be typed in.
 - **Home:** item count, food that needs attention, **Expiring Soon**, today's best
   **Recipe Pick for You**, and a link to the shopping list.
-- **Recipes:** 29 built-in recipes, ranked by how well they fit your fridge (see below).
+- **Recipes:** 100 built-in recipes (breakfast, lunch, dinner and snacks), ranked by how well
+  they fit your fridge (see below). The best 20 show first; "Show more" loads the rest.
   Filters: All, Use Before Lose, Can Make Now, Quick. Search by recipe name or ingredient.
 - **Recipe Details:** every ingredient marked Have / Missing / Use soon, full cooking
   instructions, and **Add Missing Items to Shopping List**.
@@ -98,14 +99,19 @@ Salt, pepper, cooking oil and water are assumed to be in every kitchen.
 | `css/styles.css` | The **looks**: colours, sizes, spacing. The colours at the top come from Figma |
 | `js/storage.js` | **Saving and loading**: the only file that touches the browser's storage, with safety checks |
 | `js/data.js` | The **food choices** for Add Food (not anyone's actual food) |
-| `js/recipes.js` | The **recipe database**. Copy one recipe block to add a new recipe |
+| `js/recipes.js` | The **recipe database** (first 29 recipes + ingredient matching rules). Copy one recipe block to add a new recipe |
+| `js/recipes-more.js` | The **rest of the recipes** (71 more) |
+| `js/photo-credits.js` | Who took each **recipe photo** and its license (shown on Profile → Photo Credits) |
 | `js/app.js` | The **behaviour**: saving, recipe matching, and what every button does |
 | `images/` | Photos and arrows from the Figma file |
+| `images/recipes/` | One photo per recipe, from Wikimedia Commons |
 
 ## Notes
 
-- Most recipes use a food emoji on a coloured tile as their picture. Only Broccoli Cheddar
-  Pasta has real photos so far. To add a photo, put it in `images/` and set
-  `image: { photo: "images/your-photo.jpg" }` on that recipe.
+- **Recipe photos** are free-licensed photos from Wikimedia Commons (CC0, public domain,
+  CC BY or CC BY-SA). Their licenses allow use in the app **as long as each photographer is
+  credited**, which the Photo Credits screen does. When adding or replacing a photo, add its
+  credit to `js/photo-credits.js`. Don't use photos copied from Google image search: most are
+  copyrighted. If a photo is missing, the recipe shows an emoji tile instead.
 - The cheese and yogurt photos look like stock-photo previews. Replace them before
   launching publicly.

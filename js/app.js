@@ -167,12 +167,23 @@ function foodPicture(item, extraClass) {
   return `<div class="photo photo--emoji ${extraClass}" role="img" aria-label="${esc(item.name)}">${emoji}</div>`;
 }
 
-/* A recipe's picture: its photo, or its emoji on its colour */
+/* A recipe's picture: its photo (from js/photo-credits.js or the recipe itself).
+   If there's no photo, or it fails to load, its emoji on its colour is shown instead. */
+function recipePhoto(recipe, useHero) {
+  const image = recipe.image || {};
+  if (useHero && image.heroPhoto) return image.heroPhoto;
+  if (image.photo) return image.photo;
+  const credit = typeof RECIPE_PHOTOS !== "undefined" && RECIPE_PHOTOS[recipe.id];
+  return credit ? `images/recipes/${recipe.id}.jpg` : null;
+}
+
 function recipePicture(recipe, className, useHero) {
   const image = recipe.image || {};
-  const photo = (useHero && image.heroPhoto) || image.photo;
-  if (photo) return `<img class="${className}" src="${photo}" alt="${esc(recipe.name)}">`;
-  return `<div class="${className} recipe-emoji" style="background:${esc(image.color || "#ffffff")}" role="img" aria-label="${esc(recipe.name)}">${image.emoji || "🍽️"}</div>`;
+  const emojiTile = `<div class="${className} recipe-emoji" style="background:${esc(image.color || "#ffffff")}" role="img" aria-label="${esc(recipe.name)}">${image.emoji || "🍽️"}</div>`;
+  const photo = recipePhoto(recipe, useHero);
+  if (!photo) return emojiTile;
+  return `<img class="${className}" src="${esc(photo)}" alt="${esc(recipe.name)}" loading="lazy" decoding="async"
+    data-fallback="${esc(emojiTile)}" onerror="this.outerHTML = this.dataset.fallback">`;
 }
 
 function totalMinutes(recipe) {
@@ -365,6 +376,7 @@ function showScreen() {
   if (screen.id === "recipes") openRecipeFinder(detail);
   if (screen.id === "recipe") renderRecipe(detail);
   if (screen.id === "shopping") renderShopping();
+  if (screen.id === "credits") renderCredits();
 }
 
 let pendingScrollTarget = null;   // an element to scroll to instead of the top (e.g. a new food)
@@ -945,7 +957,8 @@ document.getElementById("food-delete").addEventListener("click", () => {
 /* =========================================================
    10. RECIPE FINDER
    ========================================================= */
-const recipeView = { filter: prefs.recipeFilter };
+const recipeView = { filter: prefs.recipeFilter, showing: 20 };
+const RECIPES_PER_PAGE = 20;
 const recipeSearch = document.getElementById("recipe-search");
 const FILTER_LABELS = { "all": "All recipes", "can-make": "Can make now", "use-soon": "Use before lose" };
 
@@ -967,6 +980,7 @@ function passesFilter(match) {
 
 function openRecipeFinder(ingredient) {
   if (ingredient) recipeSearch.value = ingredient;
+  recipeView.showing = RECIPES_PER_PAGE;
   renderRecipes();
 }
 
@@ -994,7 +1008,8 @@ function renderRecipes() {
     return;
   }
 
-  list.innerHTML = shown.map((match) => {
+  const visible = shown.slice(0, recipeView.showing);
+  list.innerHTML = visible.map((match) => {
     const recipe = match.recipe;
     const tags = recipe.categories.slice(0, 3).map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("");
     const link = `#recipe/${encodeURIComponent(recipe.id)}`;
@@ -1010,9 +1025,22 @@ function renderRecipes() {
         </span>
       </a>`;
   }).join("");
+
+  // Only the best matches are shown at first; "Show more" adds the next batch
+  if (shown.length > visible.length) {
+    const next = Math.min(RECIPES_PER_PAGE, shown.length - visible.length);
+    list.insertAdjacentHTML("beforeend",
+      `<button class="green-button show-more" type="button" data-show-more>Show ${next} more recipes (${shown.length - visible.length} left)</button>`);
+  }
 }
 
-recipeSearch.addEventListener("input", renderRecipes);
+document.getElementById("recipe-list").addEventListener("click", (event) => {
+  if (!event.target.closest("[data-show-more]")) return;
+  recipeView.showing += RECIPES_PER_PAGE;
+  renderRecipes();
+});
+
+recipeSearch.addEventListener("input", () => { recipeView.showing = RECIPES_PER_PAGE; renderRecipes(); });
 
 document.getElementById("recipes-status").addEventListener("click", (event) => {
   if (event.target.closest("[data-clear-search]")) {
@@ -1026,6 +1054,7 @@ document.getElementById("recipe-chips").addEventListener("click", (event) => {
   const chip = event.target.closest("[data-filter]");
   if (!chip) return;
   recipeView.filter = chip.dataset.filter;
+  recipeView.showing = RECIPES_PER_PAGE;
   prefs.recipeFilter = recipeView.filter;
   savePrefs();
   renderRecipes();
@@ -1191,6 +1220,22 @@ document.getElementById("shopping-clear").addEventListener("click", () => {
   renderShopping();
   showToast("Shopping list cleared", () => { shoppingList = old; saveShopping(); renderShopping(); });
 });
+
+/* =========================================================
+   13. PHOTO CREDITS
+   The recipe photos are free-licensed photos from Wikimedia Commons.
+   Their licenses require crediting each photographer, which this screen does.
+   ========================================================= */
+function renderCredits() {
+  const list = document.getElementById("credits-list");
+  const entries = RECIPE_DATABASE.filter((r) => RECIPE_PHOTOS[r.id]).map((r) => [r, RECIPE_PHOTOS[r.id]]);
+  list.innerHTML = entries.map(([recipe, c]) => `
+    <li>
+      <strong>${esc(recipe.name)}</strong>
+      <span>“${esc(c.title)}” by ${esc(c.artist)}, <a href="${esc(c.licenseUrl || c.page)}" target="_blank" rel="noopener">${esc(c.license)}</a>.
+      ${c.modified ? "Cropped and resized. " : ""}<a href="${esc(c.page)}" target="_blank" rel="noopener">Source</a></span>
+    </li>`).join("");
+}
 
 /* Start the app */
 showStorageStatus(FridgeStorage.status());
